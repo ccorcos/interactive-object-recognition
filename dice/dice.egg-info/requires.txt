@@ -1,3 +1,0 @@
-numpy
-se3
-sparkprob
