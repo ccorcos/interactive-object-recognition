@@ -59,12 +59,13 @@ targets = numpy.array(targets, dtype=theano.config.floatX)
 nextProbs = numpy.array(nextProbs, dtype=theano.config.floatX)
 
 
+
 rnn = RNN(
     n = 50,
     nin = 11,
     nout = 6,
     L1_reg = .01,
-    L2_reg = -.01
+    L2_reg = .01
 )
 
 rnn.trainModel(

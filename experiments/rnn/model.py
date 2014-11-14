@@ -70,7 +70,7 @@ import theano.tensor as T
 import numpy
 from utils import *
 
-dot = numpy.dot
+dot = T.dot
 sigmoid = T.nnet.sigmoid
 crossEntropy = T.nnet.binary_crossentropy
 

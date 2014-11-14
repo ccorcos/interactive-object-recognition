@@ -37,12 +37,21 @@ import numpy
 from sparkprob import sparkprob
 import cPickle as pickle
 
+# hide warnings
+import warnings
+warnings.simplefilter("ignore")
 
 # stochastic gradient decent
 # use momentum?
 # minibatch training
 # randomize the sample training order
 # generalize parameter updating and gradients -- see comment at the bottom
+
+def shuffleInUnison(arr):
+    rng_state = numpy.random.get_state()
+    for item in arr:
+        numpy.random.shuffle(item)
+        numpy.random.set_state(rng_state)
 
 class RNN:
     def __init__(self, n=0, nin=0, nout=0, L1_reg=0.0, L2_reg=0.0):
@@ -61,10 +70,9 @@ class RNN:
 
         rnn.trainModel(
             inputs=inputs,
-            target=target,
-            learningRage=0.1,
-            L1_reg=0.1,
-            L2_reg=0.2
+            targets=targets,
+            learningRate=0.1,
+            epochs=100
         )
 
         rnn.testModel(inputs[0], targets[0])
@@ -109,18 +117,19 @@ class RNN:
         # initial hidden state of the RNN
         self.h0 = theano.shared(numpy.zeros((self.n)))
 
+        self.params = [self.W_hh, self.W_hx, self.W_yh, self.b_h, self.b_y, self.h0]
+
         # recurrent function
-        def step(x_t, h_tm1, W_hh, W_hx, W_yh, b_h, b_y):
-            h_t = T.nnet.sigmoid(T.dot(W_hx, x_t) + T.dot(W_hh, h_tm1) + b_h)
-            y_t = T.nnet.sigmoid(T.dot(W_yh, h_t) + b_y)
+        def step(x_t, h_tm1):
+            h_t = T.nnet.sigmoid(T.dot(self.W_hx, x_t) + T.dot(self.W_hh, h_tm1) + self.b_h)
+            y_t = T.nnet.sigmoid(T.dot(self.W_yh, h_t) + self.b_y)
             return h_t, y_t
 
         # the hidden state `h` for the entire sequence, and the output for the
         # entrie sequence `y` (first dimension is always time)
         [self.h, self.y], _ = theano.scan(step,
                                 sequences=self.x,
-                                outputs_info=[self.h0, None],
-                                non_sequences=[self.W_hh, self.W_hx, self.W_yh, self.b_h, self.b_y])
+                                outputs_info=[self.h0, None])
 
         # predict function outputs y for a given x
         self.predict = theano.function(inputs=[self.x,], outputs=self.y)
@@ -144,34 +153,37 @@ class RNN:
 
         # error between output and target
         self.loss = abs(self.y-self.t).sum()
-        self.err =  self.loss + self.L1_reg*self.L1  + self.L2_reg*self.L2_sqr
+        self.cost =  self.loss + self.L1_reg*self.L1  + self.L2_reg*self.L2_sqr
 
         # gradients on the weights using BPTT
-        self.gW_hh, self.gW_hx, self.gW_yh, self.gb_h, self.gb_y, self.gh0 = T.grad(self.err, [self.W_hh, self.W_hx, self.W_yh, self.b_h, self.b_y, self.h0])
-        self.gradients = theano.function(inputs=[self.x, self.t], outputs=[self.gW_hh, self.gW_hx, self.gW_yh, self.gb_h, self.gb_y, self.gh0])
+        self.gparams = [T.grad(self.cost, param) for param in self.params]
+        self.gradients = theano.function(inputs=[self.x, self.t], outputs=self.gparams)
 
-        # error is a function while err is the symbolic variable
-        self.error = theano.function(inputs=[self.x,self.t], outputs=self.err)
+        # error is a function while cost is the symbolic variable
+        self.error = theano.function(inputs=[self.x,self.t], outputs=self.cost)
 
         # learning rate
         self.lr = T.scalar()
 
+        updates = [
+            (param, param - self.lr * gparam)
+            for param, gparam in zip(self.params, self.gparams)
+        ]
+
         # training function
         self.trainStep = theano.function([self.x, self.t, self.lr],
-                             self.err,
-                             updates={self.W_hh: self.W_hh - self.lr * self.gW_hh,
-                                      self.W_hx: self.W_hx - self.lr * self.gW_hx,
-                                      self.W_yh: self.W_yh - self.lr * self.gW_yh,
-                                      self.b_h: self.b_h - self.lr * self.gb_h,
-                                      self.b_y: self.b_y - self.lr * self.gb_y,
-                                      self.h0: self.h0 - self.lr * self.gh0})
+                             self.cost,
+                             updates=updates)
 
-    def trainModel(self, inputs, targets, learningRate=0.1, epochs=100):
+    def trainModel(self, inputs, targets, learningRate=0.1, epochs=100, shuffle=True):
         """
         Train the RNN on the provided inputs and targets for a given learning rate and number of epochs.
         """
 
         print "Training the RNN..."
+        if shuffle:
+            shuffleInUnison([inputs, targets])
+
         # training
         for epoch in range(epochs):
             print "EPOCH: %d/%d" % (epoch, epochs)
@@ -193,34 +205,3 @@ class RNN:
 
     def load(self):
         pass
-
-
-# # W_kh, b_y are ommited because they're redundant
-# params = [W_ka, W_ho, W_zh, W_kh, W_hk, b_h, b_z, b_k, k0]
-#
-# # L1
-# L1 = 0
-# for param in params:
-# 	L1 += abs(param.sum())
-#
-# # square of L2 norm
-# L2_sqr = 0
-# for param in params:
-# 	L2_sqr += (param ** 2).sum()
-#
-# error = predictError + autoencodeError + L1_reg*L1  + L2_reg*L2_sqr
-#
-# # gradients on the weights using BPTT
-# gParams = T.grad(error, params)
-#
-# gradients = theano.function(inputs=[o,a], outputs=gParams)
-# err = theano.function(inputs=[o,a], outputs=error)
-#
-# updates = {}
-# for param, gParam in zip(params, gParams):
-# 	updates[param] = param - lr * gParam
-#
-# # training function
-# trainStep = theano.function([o, a, lr],
-#                      error,
-#                      updates=updates)

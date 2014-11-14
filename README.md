@@ -9,11 +9,10 @@ a model that is very powerful at learning latent variables, in this case, 3D pos
 ## To Do
 
 - make the rnn.py more portable
+  - x-entropy error and softmax output
   - use momentum in the optimization
-  - minibatch training
-  - randomize training order
-  - wrap parameters and updating into an array
-  - try using dropout?
+  - dropout
+
 - get the rnn to learn just one die
 - get the rnn to learn a set of dice
 - write up BACKGROUND.md and RNN.md
