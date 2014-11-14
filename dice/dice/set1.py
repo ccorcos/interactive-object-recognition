@@ -11,3 +11,4 @@ d36Side = Die([1,2,3,6,4,5], name="d36Side") # sides swapped again
 
 dice = [d, dMirror, dBack, d35Side, d36Side]
 names = map(lambda die: die.name, dice)
+numDice = len(dice)

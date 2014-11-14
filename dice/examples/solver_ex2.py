@@ -1,6 +1,7 @@
 from dice.die import *
 from dice.set1 import *
 from dice.solver import *
+from dice.printer import Printer
 import random
 import numpy
 import os
@@ -31,34 +32,29 @@ minimum expected entropy.
 # Model example
 solver = Solver(dice)
 
-# printing
-space = ' | '
-col1 = len(allFeatures)*2-1
-col2 = len(dice)*2-1
-col3 = len(allActions)*2-1
-print 'features'.center(col1) + space + 'dice'.center(col2) + space + 'actions'.center(col3)
-correct = names.index(randomDie.name)
-print ' '*col1 + space + mark(correct, len(dice)) + space
+correctDieIndex = names.index(randomDie.name)
+
+printer = Printer(numDice, correctDieIndex)
 
 observation = randomDie.obs()
 diceProb, expectedEntropy = solver.observe(observation)
-observed = allFeatures.index(observation)
+obsIndex = featureIndex(observation)
 
-print '-'*(col1+col2+col3+len(space)*2)
-print mark(observed, len(allFeatures), marker='x') + space + sparkprob(diceProb) + space + sparkprob(expectedEntropy, maximum=maxEntropy(len(dice)*24))
+printer.observation(obsIndex, diceProb, expectedEntropy)
 
 # print what feature was observes
 # print what expected next features to observe
 # print what action was taken
 while max(diceProb) != 1.0:
-    print '-'*(col1+col2+col3+len(space)*2)
     actionIndex = minIndex(expectedEntropy)
     action = allActions[actionIndex]
     probNext = solver.act(action)
-    print sparkprob(probNext) + space + ' '*col2 + space + mark(actionIndex, len(allActions), marker='x')
-    print '-'*(col1+col2+col3+len(space)*2)
+
+    printer.action(actionIndex, probNext)
+
     randomDie.act(action)
     observation = randomDie.obs()
     diceProb, expectedEntropy = solver.observe(observation)
-    observed = allFeatures.index(observation)
-    print mark(observed, len(allFeatures), marker='x') + space + sparkprob(diceProb) + space + sparkprob(expectedEntropy, maximum=maxEntropy(len(dice)*24))
+    obsIndex = featureIndex(observation)
+
+    printer.observation(obsIndex, diceProb, expectedEntropy)

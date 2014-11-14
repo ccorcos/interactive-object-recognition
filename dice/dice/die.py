@@ -6,6 +6,15 @@ pi = numpy.pi
 allActions = ['right','left','up','down','back']
 allFeatures = [1,2,3,4,5,6]
 
+numActions = len(allActions)
+numFeatures = len(allFeatures)
+
+def actionIndex(actionName):
+    return allActions.index(actionName)
+
+def featureIndex(featureName):
+    return allFeatures.index(featureName)
+
 facing = {'front': numpy.array([1,0,0]), \
           'back': numpy.array([-1,0,0]), \
           'up': numpy.array([0,0,1]),    \

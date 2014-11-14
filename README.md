@@ -1,6 +1,10 @@
 # IOR - Interactive Object Recognition
 
-- generate some datasets
+
+## To Do
+
+- make the rnn.py more portable
+- move my model into this project as well
 - run the rnn on all the data and report the results
 - run the run on just one die and report the results
 - run on all the dice with dropout and report the results

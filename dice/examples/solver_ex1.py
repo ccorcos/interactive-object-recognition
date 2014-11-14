@@ -1,6 +1,7 @@
 from dice.die import *
 from dice.set1 import *
 from dice.solver import *
+from dice.printer import Printer
 import random
 import numpy
 import os
@@ -26,14 +27,15 @@ def walk(die):
 
 observations, actions = walk(randomDie)
 
-possibilities, probDice, probNextObservation, expectedDiceEntropyPerAction = solve(dice, observations, actions)
+possibilities, probDice, probNext, expectedEntropy = solve(dice, observations, actions)
 
 # summarize
-correct = names.index(randomDie.name)
-space = '    '
-print 'p(dice)'.center(len(dice)*2-1) + space + 'E(ent)'.center(len(allActions)*2-1)
-star = list(' '*len(dice))
-star[correct] = "*"
-print ' '.join(star)
-for i in range(len(observations)):
-    print sparkprob(probDice[i]) + space + sparkprob(expectedDiceEntropyPerAction[i], maximum=maxEntropy(len(dice)*24))
+correctDieIndex = names.index(randomDie.name)
+printer = Printer(numDice, correctDieIndex)
+
+printer.observation(featureIndex(observations[0]), probDice[0], expectedEntropy[0])
+
+for i in range(len(actions)):
+    printer.action(actionIndex(actions[i]), probNext[i])
+
+    printer.observation(featureIndex(observations[i+1]), probDice[i+1], expectedEntropy[i+1])
