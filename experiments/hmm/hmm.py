@@ -1,13 +1,12 @@
 #!/usr/bin/python
 # coding: utf-8
 
-# Recurrent Neural Network
-# This is an implementation of a RNN for unsupervised learning of time series data.
+# Hidden Markov Modell
+
 #
-# x_t: input at time t
+# o_t: observation at time t
 # h_t: hidden layer at time t
-# y_t: is the prediction
-# t_t: is the targets that y needs to be
+# a_t: is the action at time t
 #
 # http://vimdoc.sourceforge.net/htmldoc/digraph.html#digraph-table
 # <C-k>Dt: ▼
@@ -15,19 +14,22 @@
 # <C-k>PR: ▶
 # <C-k>PL: ◀
 #
-#
-#        (W_hx)          (W_yh)
-#  x_t ---------▶  h_t ---------▶ y_t
-#
-#                   ▲
-#           (W_hh)  |
-#                   |
-#  h_{t-1} ---------
+#             a_t             a_{t+1}
+#              |               |
+#      (W_ha)  |               |
+#              |               |
+#              ▼    (W_hh)     ▼
+#  ---------▶ h_t ---------▶ h_{t+1} ---------▶
+#              |               |
+#      (W_oh)  |               |
+#              |               |
+#              ▼               ▼
+#             o_t             o_{t+1}
 #
 #
 # Predictor:
-# p(h_t | h_{t-1}, x_t) = \sigma(W_hh h_{t-1} + W_hx x_t + b_h)
-# p(y_t | h_t) = \sigma(W_yh h_t + b_y)
+# p(h_t | h_{t-1}, a_t) = softmax(W_hh h_{t-1} + W_ha a_t + b_h)
+# p(o_t | h_t) = sigmoid(W_oh h_t + b_o)
 # J = error(y_t, x_{t_1})
 #
 
@@ -41,11 +43,7 @@ import cPickle as pickle
 import warnings
 warnings.simplefilter("ignore")
 
-# stochastic gradient decent
-# use momentum?
-# minibatch training
-# randomize the sample training order
-# generalize parameter updating and gradients -- see comment at the bottom
+
 
 def shuffleInUnison(arr):
     rng_state = numpy.random.get_state()
@@ -53,30 +51,13 @@ def shuffleInUnison(arr):
         numpy.random.shuffle(item)
         numpy.random.set_state(rng_state)
 
-class RNN:
-    def __init__(self, n=0, nin=0, nout=0, L1_reg=0.0, L2_reg=0.0):
+
+
+class HMM:
+    def __init__(self, n=0, no=0, na=0, L1_reg=0.0, L2_reg=0.0):
         """
-        Initialize a Recurrent Nerual Network layer sizes and regularization hyperparameters.
-
-        Example Udage:
-
-        rnn = RNN(
-            n = 50,
-            nin = 11,
-            nout = 6,
-            L1_reg = 0,
-            L2_reg = 0
-        )
-
-        rnn.trainModel(
-            inputs=inputs,
-            targets=targets,
-            learningRate=0.1,
-            epochs=100
-        )
-
-        rnn.testModel(inputs[0], targets[0])
-
+        Initialize a Hidden Markov Model with state, observation and actions
+        sizes and regularization hyperparameters.
         """
         # regularization hyperparameters
         self.L1_reg = float(L1_reg)
@@ -85,39 +66,56 @@ class RNN:
         # number of hidden units
         self.n = n
         # number of input units
-        self.nin = nin
+        self.no = no
         # number of output units
-        self.nout = nout
+        self.na = na
 
-        print "Constructing the RNN..."
+        print "Constructing the HMM..."
         self.constructModel()
-        print "Constructing the RNN trainer..."
+        print "Constructing the HMM trainer..."
         self.constructTrainer()
 
     def constructModel(self):
         """
-        Construct the computational graph of the RNN with Theano.
+        Construct the computational graph of the HMM with Theano.
         """
 
-        # input (where first dimension is time)
-        self.x = T.matrix()
-        # target (where first dimension is time)
-        self.t = T.matrix()
+        # observatoins (where first dimension is time)
+        self.o = T.matrix()
+        # actions (where first dimension is time)
+        self.a = T.matrix()
 
         # recurrent weights as a shared variable
         self.W_hh = theano.shared(numpy.random.uniform(size=(self.n, self.n), low=-.01, high=.01))
-        # input to hidden layer weights
-        self.W_hx = theano.shared(numpy.random.uniform(size=(self.n, self.nin), low=-.01, high=.01))
-        # hidden to output layer weights
-        self.W_yh = theano.shared(numpy.random.uniform(size=(self.nout, self.n), low=-.01, high=.01))
+        # hidden state to observation weights
+        self.W_oh = theano.shared(numpy.random.uniform(size=(self.no, self.n), low=-.01, high=.01))
+        # action to hidden state weights
+        self.W_ha = theano.shared(numpy.random.uniform(size=(self.n, self.na), low=-.01, high=.01))
         # hidden layer bias weights
         self.b_h = theano.shared(numpy.zeros((self.n)))
-        # output layer bias weights
-        self.b_y = theano.shared(numpy.zeros((self.nout)))
-        # initial hidden state of the RNN
+        # observation bias weights
+        self.b_o = theano.shared(numpy.zeros((self.nout)))
+        # initial hidden state
         self.h0 = theano.shared(numpy.zeros((self.n)))
+        # initial action
+        self.a0 = theano.shared(numpy.zeros((self.na)))
 
-        self.params = [self.W_hh, self.W_hx, self.W_yh, self.b_h, self.b_y, self.h0]
+        self.params = [self.W_hh, self.W_oh, self.W_ha, self.b_h, self.b_o, self.h0, self.a0]
+
+
+
+
+
+
+
+# HERE
+
+
+
+
+
+
+
 
         # recurrent function
         def step(x_t, h_tm1):
@@ -152,7 +150,8 @@ class RNN:
         self.L2_sqr += (self.W_yh ** 2).sum()
 
         # error between output and target
-        self.loss = abs(self.y-self.t).sum()
+        # self.loss = abs(self.y-self.t).sum()
+        self.loss = T.mean(T.nnet.binary_crossentropy(self.y, self.t))
         self.cost =  self.loss + self.L1_reg*self.L1  + self.L2_reg*self.L2_sqr
 
         # gradients on the weights using BPTT
@@ -187,9 +186,10 @@ class RNN:
         # training
         for epoch in range(epochs):
             print "EPOCH: %d/%d" % (epoch, epochs)
+            e = None
             for i in range(len(inputs)):
                 e = self.trainStep(inputs[i], targets[i], learningRate)
-                print "  ", e
+            print "  ", e
         print "DONE"
         print ""
 

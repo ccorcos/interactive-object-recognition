@@ -13,7 +13,7 @@ import theano.tensor as T
 import numpy
 import cPickle as pickle
 from sparkprob import sparkprob
-from rnn import *
+from rnn1 import *
 
 print """
 Running Experiment 1:
@@ -61,7 +61,7 @@ nextProbs = numpy.array(nextProbs, dtype=theano.config.floatX)
 
 
 rnn = RNN(
-    n = 50,
+    n = 500,
     nin = 11,
     nout = 6,
     L1_reg = .01,
@@ -71,7 +71,8 @@ rnn = RNN(
 rnn.trainModel(
     inputs=inputs,
     targets=targets,
-    learningRate=0.1,
+    learningRate=0.01,
+    epochs=200
 )
 
 rnn.testModel(inputs[0], targets[0])
