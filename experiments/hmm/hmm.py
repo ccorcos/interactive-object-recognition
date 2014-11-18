@@ -1,10 +1,17 @@
 #!/usr/bin/python
 # coding: utf-8
 
-# Hidden Markov Modell
 
-#
-# o_t: observation at time t
+# Hidden Markov Modell
+# https://gist.github.com/jzelner/4267380
+
+
+
+
+
+
+# x_t: observation at time t
+# y_t: predicted observation at time t
 # h_t: hidden layer at time t
 # a_t: is the action at time t
 #
@@ -21,17 +28,17 @@
 #              ▼    (W_hh)     ▼
 #  ---------▶ h_t ---------▶ h_{t+1} ---------▶
 #              |               |
-#      (W_oh)  |               |
+#      (W_xh)  |               |
 #              |               |
 #              ▼               ▼
-#             o_t             o_{t+1}
+#             x_t             x_{t+1}
 #
 #
 # Predictor:
-# p(h_t | h_{t-1}, a_t) = softmax(W_hh h_{t-1} + W_ha a_t + b_h)
-# p(o_t | h_t) = sigmoid(W_oh h_t + b_o)
+# p(h_t | h_{t-1}, a_t) = sigmoid(W_hh h_{t-1} + W_ha a_t + b_h)
+# p(x_t | h_t) = sigmoid(W_xh h_t + b_x)
 # J = error(y_t, x_{t_1})
-#
+
 
 import theano
 import theano.tensor as T
@@ -39,10 +46,10 @@ import numpy
 from sparkprob import sparkprob
 import cPickle as pickle
 
+
 # hide warnings
 import warnings
 warnings.simplefilter("ignore")
-
 
 
 def shuffleInUnison(arr):
@@ -52,9 +59,8 @@ def shuffleInUnison(arr):
         numpy.random.set_state(rng_state)
 
 
-
 class HMM:
-    def __init__(self, n=0, no=0, na=0, L1_reg=0.0, L2_reg=0.0):
+    def __init__(self, n=0, nx=0, na=0, L1_reg=0.0, L2_reg=0.0):
         """
         Initialize a Hidden Markov Model with state, observation and actions
         sizes and regularization hyperparameters.
@@ -66,7 +72,7 @@ class HMM:
         # number of hidden units
         self.n = n
         # number of input units
-        self.no = no
+        self.nx = nx
         # number of output units
         self.na = na
 
@@ -81,29 +87,39 @@ class HMM:
         """
 
         # observatoins (where first dimension is time)
-        self.o = T.matrix()
+        self.x = T.matrix()
         # actions (where first dimension is time)
         self.a = T.matrix()
 
         # recurrent weights as a shared variable
         self.W_hh = theano.shared(numpy.random.uniform(size=(self.n, self.n), low=-.01, high=.01))
         # hidden state to observation weights
-        self.W_oh = theano.shared(numpy.random.uniform(size=(self.no, self.n), low=-.01, high=.01))
+        self.W_xh = theano.shared(numpy.random.uniform(size=(self.nx, self.n), low=-.01, high=.01))
         # action to hidden state weights
         self.W_ha = theano.shared(numpy.random.uniform(size=(self.n, self.na), low=-.01, high=.01))
         # hidden layer bias weights
         self.b_h = theano.shared(numpy.zeros((self.n)))
         # observation bias weights
-        self.b_o = theano.shared(numpy.zeros((self.nout)))
+        self.b_x = theano.shared(numpy.zeros((self.nout)))
         # initial hidden state
         self.h0 = theano.shared(numpy.zeros((self.n)))
-        # initial action
-        self.a0 = theano.shared(numpy.zeros((self.na)))
 
-        self.params = [self.W_hh, self.W_oh, self.W_ha, self.b_h, self.b_o, self.h0, self.a0]
+        self.params = [self.W_hh, self.W_xh, self.W_ha, self.b_h, self.b_x, self.h0]
+
+        def emissionStep(h_t):
+            y_t = T.nnet.sigmoid( T.dot(self.W_xh, h_t) + self.b_x)
+            return y_t
+
+        def transitionStep(h_tm1, a_t):
+            h_t = T.nnet.sigmoid( T.dot(self.W_hh, h_tm1) + T.dot(self.W_ha, a_t) + self.b_h)
+            return h_t
 
 
 
+        y0 = T.nnet.sigmoid( T.dot(W_xh, h0) + b_x)
+
+        # training like this isnt exactly going to work. We NEED to use EM algorithm for this.
+        # maybe an advantage of my model? its all forward-feed.
 
 
 
