@@ -8,6 +8,28 @@ a model that is very powerful at learning latent variables, in this case, 3D pos
 
 ## To Do
 
+HMM stuff:
+traditionally, hmm's just have a single number at the output which is the
+probability of the next. If they all sum to 1, then we have a finite state
+automata. This would make sense for me if i had poses\*objects number of hidden
+states. However, we could instead use a softmax.
+
+When do you use the viterbi algorithm here? For tracing back which previous
+states you we actually in...?
+
+Anyways, you could use simple sigmoid instead of softmax -- this would allow for
+a combinatorial state vector.
+
+
+
+Backpropagation through time seems like a totally valid way to train these
+anyways.
+
+1. simple hmm with unit values that sum to zero
+2. simple hmm with softmax
+3. simple hmm with sigmoid units
+
+
 - hmm
 - my model
 - dropout?
