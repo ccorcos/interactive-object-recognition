@@ -1,16 +1,13 @@
 #!/usr/bin/python
 # coding: utf-8
 
+# Hidden Markov Model
+# This is an implementation with the forward-backward Baum-Welch
+# algorithm: https://gist.github.com/jzelner/4267380
+# I plan on implenting this in a more Theano way by computing
+# the gradients and using backpropagation through time.
 
-# Hidden Markov Modell
-# https://gist.github.com/jzelner/4267380
-
-
-
-
-
-
-# x_t: observation at time t
+# o_t: observation at time t
 # y_t: predicted observation at time t
 # h_t: hidden layer at time t
 # a_t: is the action at time t
@@ -28,15 +25,15 @@
 #              ▼    (W_hh)     ▼
 #  ---------▶ h_t ---------▶ h_{t+1} ---------▶
 #              |               |
-#      (W_xh)  |               |
+#      (W_oh)  |               |
 #              |               |
 #              ▼               ▼
-#             x_t             x_{t+1}
+#             o_t             o_{t+1}
 #
 #
 # Predictor:
 # p(h_t | h_{t-1}, a_t) = sigmoid(W_hh h_{t-1} + W_ha a_t + b_h)
-# p(x_t | h_t) = sigmoid(W_xh h_t + b_x)
+# p(o_t | h_t) = sigmoid(W_oh h_t + b_x)
 # J = error(y_t, x_{t_1})
 
 
@@ -60,7 +57,7 @@ def shuffleInUnison(arr):
 
 
 class HMM:
-    def __init__(self, n=0, nx=0, na=0, L1_reg=0.0, L2_reg=0.0):
+    def __init__(self, n=0, no=0, na=0, L1_reg=0.0, L2_reg=0.0):
         """
         Initialize a Hidden Markov Model with state, observation and actions
         sizes and regularization hyperparameters.
@@ -72,7 +69,7 @@ class HMM:
         # number of hidden units
         self.n = n
         # number of input units
-        self.nx = nx
+        self.no = no
         # number of output units
         self.na = na
 
@@ -87,36 +84,49 @@ class HMM:
         """
 
         # observatoins (where first dimension is time)
-        self.x = T.matrix()
+        self.o = T.matrix()
         # actions (where first dimension is time)
         self.a = T.matrix()
 
         # recurrent weights as a shared variable
         self.W_hh = theano.shared(numpy.random.uniform(size=(self.n, self.n), low=-.01, high=.01))
         # hidden state to observation weights
-        self.W_xh = theano.shared(numpy.random.uniform(size=(self.nx, self.n), low=-.01, high=.01))
+        self.W_oh = theano.shared(numpy.random.uniform(size=(self.no, self.n), low=-.01, high=.01))
         # action to hidden state weights
         self.W_ha = theano.shared(numpy.random.uniform(size=(self.n, self.na), low=-.01, high=.01))
         # hidden layer bias weights
         self.b_h = theano.shared(numpy.zeros((self.n)))
         # observation bias weights
-        self.b_x = theano.shared(numpy.zeros((self.nout)))
+        self.b_o = theano.shared(numpy.zeros((self.no)))
         # initial hidden state
         self.h0 = theano.shared(numpy.zeros((self.n)))
 
-        self.params = [self.W_hh, self.W_xh, self.W_ha, self.b_h, self.b_x, self.h0]
+        self.params = [self.W_hh, self.W_oh, self.W_ha, self.b_h, self.b_o, self.h0]
 
-        def emissionStep(h_t):
-            y_t = T.nnet.sigmoid( T.dot(self.W_xh, h_t) + self.b_x)
+        def emission(h_t):
+            y_t = T.nnet.softmax( T.dot(self.W_oh, h_t) + self.b_o)
             return y_t
 
-        def transitionStep(h_tm1, a_t):
-            h_t = T.nnet.sigmoid( T.dot(self.W_hh, h_tm1) + T.dot(self.W_ha, a_t) + self.b_h)
+        def transition(h_tm1, a_t):
+            h_t = T.nnet.softmax( T.dot(self.W_hh, h_tm1) + T.dot(self.W_ha, a_t) + self.b_h)
             return h_t
 
+        # the initial prediction
+        y0 = T.nnet.softmax( T.dot(self.W_oh, self.h0) + self.b_o)
+        # the initial likelihood
+        h1 =
 
 
-        y0 = T.nnet.sigmoid( T.dot(W_xh, h0) + b_x)
+        y0 = emissionStep(h0)
+
+        def step(h_tm1, a_t, o_t):
+            h_t = transitionStep(h_tm1, a_t)
+            y_t = emissionSte(h_t)
+            return h_t, y_t
+
+        [self.h, self.y], _ = theano.scan(step,
+            sequences=self.x,
+            outputs_info=[self.h0, None])
 
         # training like this isnt exactly going to work. We NEED to use EM algorithm for this.
         # maybe an advantage of my model? its all forward-feed.
@@ -134,8 +144,8 @@ class HMM:
 
 
         # recurrent function
-        def step(x_t, h_tm1):
-            h_t = T.nnet.sigmoid(T.dot(self.W_hx, x_t) + T.dot(self.W_hh, h_tm1) + self.b_h)
+        def step(o_t, h_tm1):
+            h_t = T.nnet.sigmoid(T.dot(self.W_hx, o_t) + T.dot(self.W_hh, h_tm1) + self.b_h)
             y_t = T.nnet.sigmoid(T.dot(self.W_yh, h_t) + self.b_y)
             return h_t, y_t
 

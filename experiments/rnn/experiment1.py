@@ -21,7 +21,7 @@ Training a RNN on one die.
 """
 
 with open('../datasets/one-die-optimal.pickle', 'rb') as handle:
-  samples = pickle.load(handle)
+    samples = pickle.load(handle)
 
 # sample = {
 #     'name':die.name,

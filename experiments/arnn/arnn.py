@@ -144,83 +144,78 @@ class ARNN:
             self.k0
         ]
 
-
         # Auto Encoder:
         # p(h_t | k_{t-1}, o_t) = sigmoid(W_hk k_{t-1} + W_ho o_t + b_h)
         # p(z_t | h_t) = sigmoid(W_zh h_t + b_z)
         # J = error(z_t, o_t)
         def autoencodeStep(k_tm1, o_t):
-            h_t = T.nnet.sigmoid(T.dot(W_hk, k_tm1) + T.dot(W_ho, o_t) + b_h)
-            z_t = T.nnet.sigmoid(T.dot(W_zh, h_t) + b_z)
+            h_t = T.nnet.sigmoid(T.dot(self.W_hk, k_tm1) + T.dot(self.W_ho, o_t) + self.b_h)
+            z_t = T.nnet.sigmoid(T.dot(self.W_zh, h_t) + self.b_z)
             return h_t, z_t
-
 
         # Predictor:
         # p(k_t | h_t, a_t) = sigmoid(W_kh h_t + W_ka a_t + b_k)
         # p(y_t | k_t) = sigmoid(W_yk k_t + b_y)
         # J = error(y_t, o_{t+1})
         def preditStep(h_t, a_t):
-            k_t = T.nnet.sigmoid(T.dot(W_kh, h_t) + T.dot(W_ka, a_t) + b_k)
-            y_t = T.nnet.sigmoid(T.dot(W_yk, k_t) + b_y)
+            k_t = T.nnet.sigmoid(T.dot(self.W_kh, h_t) + T.dot(self.W_ka, a_t) + self.b_k)
+            y_t = T.nnet.sigmoid(T.dot(self.W_yk, k_t) + self.b_y)
             return k_t, y_t
 
+        # There will always be one more observation than there are actions
+        # take care of it upfront so we can use scan
+        h0, z0 = autoencodeStep(self.k0, self.o[0])
 
+        def step(h_t, a_t, o_t):
+            k_t, y_t = preditStep(h_t, a_t)
+            h_tp1, z_tp1 = autoencodeStep(k_t, o_t)
+            return h_tp1, k_t, y_t, z_tp1
 
-        # https://groups.google.com/forum/#!topic/theano-users/1CWfhf7AqDU
+        [self.h, self.k, self.y, self.z], _ = theano.scan(step,
+            sequences=[self.a, self.o[1:]],
+            outputs_info=[h0, None, None, None])
 
-
-
-
-
-
-
-
-
-
-
-        # recurrent function
-        def step(x_t, h_tm1):
-            h_t = T.nnet.sigmoid(T.dot(self.W_hx, x_t) + T.dot(self.W_hh, h_tm1) + self.b_h)
-            y_t = T.nnet.sigmoid(T.dot(self.W_yh, h_t) + self.b_y)
-            return h_t, y_t
-
-        # the hidden state `h` for the entire sequence, and the output for the
-        # entrie sequence `y` (first dimension is always time)
-        [self.h, self.y], _ = theano.scan(step,
-                                sequences=self.x,
-                                outputs_info=[self.h0, None])
+        # tack on the lingering h0 and z0
+        tmp = h0[numpy.newaxis]
+        T.join(0, tmp, self.h)
+        T.join(0, z0, self.z)
 
         # predict function outputs y for a given x
-        self.predict = theano.function(inputs=[self.x,], outputs=self.y)
+        self.predict = theano.function(inputs=[self.o, self.a], outputs=self.y)
 
     def constructTrainer(self):
         """
-        Construct the computational graph of Stochastic Gradient Decent (SGD) on the RNN with Theano.
+        Construct the computational graph of Stochastic Gradient Decent (SGD) on the ARNN with Theano.
         """
 
         # L1 norm
         self.L1 = 0
-        self.L1 += abs(self.W_hh.sum())
-        self.L1 += abs(self.W_hx.sum())
-        self.L1 += abs(self.W_yh.sum())
+        self.L1 += abs(self.W_hk.sum())
+        self.L1 += abs(self.W_kh.sum())
+        self.L1 += abs(self.W_ho.sum())
+        self.L1 += abs(self.W_zh.sum())
+        self.L1 += abs(self.W_ka.sum())
 
         # square of L2 norm
         self.L2_sqr = 0
-        self.L2_sqr += (self.W_hh ** 2).sum()
-        self.L2_sqr += (self.W_hx ** 2).sum()
-        self.L2_sqr += (self.W_yh ** 2).sum()
+        self.L2_sqr += (self.W_hk ** 2).sum()
+        self.L2_sqr += (self.W_kh ** 2).sum()
+        self.L2_sqr += (self.W_ho ** 2).sum()
+        self.L2_sqr += (self.W_zh ** 2).sum()
+        self.L2_sqr += (self.W_ka ** 2).sum()
 
-        # error between output and target
-        # self.loss = abs(self.y-self.t).sum()
-        self.loss = T.mean(T.nnet.binary_crossentropy(self.y, self.t))
-        self.cost =  self.loss + self.L1_reg*self.L1  + self.L2_reg*self.L2_sqr
+        # prediction loss
+        self.ploss = T.mean(T.nnet.binary_crossentropy(self.y, self.o[1:]))
+        # autoencoding loss
+        self.aloss = T.mean(T.nnet.binary_crossentropy(self.z, self.o))
+        self.cost =  self.ploss + self.aloss + self.L1_reg*self.L1  + self.L2_reg*self.L2_sqr
 
         # gradients on the weights using BPTT
         self.gparams = [T.grad(self.cost, param) for param in self.params]
-        self.gradients = theano.function(inputs=[self.x, self.t], outputs=self.gparams)
+        self.gradients = theano.function(inputs=[self.o, self.a], outputs=self.gparams)
 
         # error is a function while cost is the symbolic variable
-        self.error = theano.function(inputs=[self.x,self.t], outputs=self.cost)
+        self.error = theano.function(inputs=[self.o,self.a], outputs=self.cost)
 
         # learning rate
         self.lr = T.scalar()
@@ -231,173 +226,38 @@ class ARNN:
         ]
 
         # training function
-        self.trainStep = theano.function([self.x, self.t, self.lr],
+        self.trainStep = theano.function([self.o, self.a, self.lr],
                              self.cost,
                              updates=updates)
 
-    def trainModel(self, inputs, targets, learningRate=0.1, epochs=100, shuffle=True):
+    def trainModel(self, observations, actions, learningRate=0.1, epochs=100, shuffle=True):
         """
-        Train the RNN on the provided inputs and targets for a given learning rate and number of epochs.
+        Train the ARNN on the provided observations and actions for a given learning rate and number of epochs.
         """
 
         print "Training the RNN..."
         if shuffle:
-            shuffleInUnison([inputs, targets])
+            shuffleInUnison([observations, actions])
 
         # training
         for epoch in range(epochs):
             print "EPOCH: %d/%d" % (epoch, epochs)
             e = None
             for i in range(len(inputs)):
-                e = self.trainStep(inputs[i], targets[i], learningRate)
+                e = self.trainStep(observations[i], actions[i], learningRate)
             print "  ", e
         print "DONE"
         print ""
 
-    def testModel(self, x, t):
-        y = self.predict(x)
-        print 'x'.center(len(x[0])*2) + '  |  ' + 'y'.center(len(y[0])*2) + '  |  ' + 't'.center(len(y[0])*2)
+    def testModel(self, obs, act):
+        y = self.predict(obs)
+        print 'obs'.center(len(obs[0])*2) + '  |  ' + 'y'.center(len(y[0])*2) + '  |  ' + 'act'.center(len(y[0])*2)
         print ''
         for i in range(len(y)):
-            print sparkprob(x[i]) + '  |  ' + sparkprob(y[i]) + '  |  ' +  sparkprob(t[i])
+            print sparkprob(obs[i]) + '  |  ' + sparkprob(y[i]) + '  |  ' +  sparkprob(act[i])
 
     def save(self):
         pass
 
     def load(self):
         pass
-
-
-
-
-
-
-
-
-
-
-# Predictor:
-# p(k_t | h_t, a_t) = \sigma(W_kh h_t + W_ka a_t + b_k)
-# p(y_t | k_t) = \sigma(W_yk k_t + b_y)
-# J = error(y_t, o_{t+1})
-def preditStep(h_t, a_t, W_kh, W_ka, W_yk, b_k, b_y):
-    k_t = sigmoid(dot(W_kh, h_t) + dot(W_ka, a_t) + b_k)
-    y_t = sigmoid(dot(W_yk, k_t) + b_y)
-    return k_t, y_t
-
-# Auto Encoder:
-# p(h_t | k_{t-1}, o_t) = \sigma(W_hk k_{t-1} + W_ho o_t + b_h)
-# p(z_t | h_t) = \sigma(W_zh h_t + b_z)
-# J = error(z_t, o_t)
-def autoencodeStep(k_tm1, o_t, W_hk, W_ho, W_zh, b_h, b_z):
-    for p in [k_tm1, o_t, W_hk, W_ho, W_zh, b_h, b_z]:
-        print p.type
-
-    h_t = sigmoid(dot(W_hk, k_tm1) + dot(W_ho, o_t) + b_h)
-    z_t = sigmoid(dot(W_zh, h_t) + b_z)
-    return h_t, z_t
-
-# Step:
-# There will be one more observation than action. Thus the last action doesnt
-# matter, but don't forget it!
-def step(o_t, a_t, k_tm1, W_hk, W_ho, W_zh,  W_kh, W_ka, W_yk, b_k, b_y, b_h, b_z):
-    h_t, z_t = autoencodeStep(k_tm1, o_t, W_hk, W_ho, W_zh, b_h, b_z)
-    k_t, y_t = preditStep(h_t, a_t, W_kh, W_ka, W_yk, b_k, b_y)
-    return h_t, z_t, k_t, y_t
-
-
-# Scan over each step for the observations and actions.
-[h, z, k, y], _ = theano.scan(step,
-                        sequences=[o, a],
-                        outputs_info=[None, None, k0, None],
-                        non_sequences=[W_hk, W_ho, W_zh, W_kh, W_ka, W_yk, b_k, b_y, b_h, b_z])
-
-print 'here'
-
-
-
-
-
-
-
-
-
-# predict function outputs y for given o and a
-predict = theano.function(inputs=[o,a], outputs=y)
-
-# auctoencode function outputs z for given o and a
-autoencode = theano.function(inputs=[o,a], outputs=z)
-
-# predictError = crossEntropy(y[:-1], o[1:])
-predictError = abs(y[:-1] - o[1:]).sum()
-
-# autoencodeError = crossEntropy(z,o)
-autoencodeError = abs(z-o).sum()
-
-# W_kh, b_y are ommited because they're redundant
-params = [W_ka, W_ho, W_zh, W_kh, W_hk, b_h, b_z, b_k, k0]
-
-# L1
-L1 = 0
-for param in params:
-    L1 += abs(param.sum())
-
-# square of L2 norm
-L2_sqr = 0
-for param in params:
-    L2_sqr += (param ** 2).sum()
-
-error = predictError + autoencodeError + L1_reg*L1  + L2_reg*L2_sqr
-
-# gradients on the weights using BPTT
-gParams = T.grad(error, params)
-
-gradients = theano.function(inputs=[o,a], outputs=gParams)
-err = theano.function(inputs=[o,a], outputs=error)
-
-updates = {}
-for param, gParam in zip(params, gParams):
-    updates[param] = param - lr * gParam
-
-# training function
-trainStep = theano.function([o, a, lr],
-                     error,
-                     updates=updates)
-
-#
-#
-# for j in range(20):
-#     for i in range(len(inputs)):
-#         print trainStep(inputs[i],outputs[i],0.000001)
-#
-#
-# for index in range(15):
-#     print nn
-#     predicted = predict(inputs[index])
-#     for i in range(len(predicted)):
-#         print sparklines.sparklines(predicted[i]) + '   ' +  sparklines.sparklines(nextProbs[index][i])
-#
-#
-#
-# for j in range(200):
-#     print trainStep(inputs[0],outputs[0], 0.01)
-#
-#
-#
-# predicted = predict(inputs[0])
-# for i in range(len(predicted)):
-#     print sparklines.sparklines(prediction) + '   ' +  sparklines.sparklines(nextProbs[index][i])
-#
-#
-# for j in range(20):
-#     for i in range(len(inputs)):
-#         print trainStep(inputs[i],nextProbs[i],0.00001)
-#
-#
-# predict(inputs[index])
-# index = 1
-# err(inputs[index], outputs[index])
-# gradients(inputs[index], outputs[index])
-# trainStep(inputs[index], outputs[index], 0.01)
-#
-# T.nnet.binary_crossentropy(predict(inputs[index]), outputs[index])
