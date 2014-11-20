@@ -8,9 +8,8 @@ a model that is very powerful at learning latent variables, in this case, 3D pos
 
 ## To Do
 
-
-
-- hmm
+- try rnn with softmax?
+- hmm?
 - my model
 - dropout?
 - minibatches

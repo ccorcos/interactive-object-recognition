@@ -65,7 +65,7 @@
 # dropout
 # stopping condition
 # multiple die
-
+import pydot
 import theano
 import theano.tensor as T
 import numpy
@@ -75,6 +75,8 @@ import cPickle as pickle
 # hide warnings
 import warnings
 warnings.simplefilter("ignore")
+
+MODE ='DebugMode'
 
 def shuffleInUnison(arr):
     rng_state = numpy.random.get_state()
@@ -111,27 +113,27 @@ class ARNN:
         self.a = T.matrix()
         print "  creating weights"
         # recurrent (filter) weights as a shared variable
-        self.W_hk = theano.shared(numpy.random.uniform(size=(self.n, self.n), low=-.01, high=.01))
+        self.W_hk = theano.shared(numpy.random.uniform(size=(self.n, self.n), low=-.01, high=.01), name="W_hk")
         # recurrent (update) weights as a shared variable
-        self.W_kh = theano.shared(numpy.random.uniform(size=(self.n, self.n), low=-.01, high=.01))
+        self.W_kh = theano.shared(numpy.random.uniform(size=(self.n, self.n), low=-.01, high=.01), name="W_kh")
         # input to hidden layer (encoding) weights
-        self.W_ho = theano.shared(numpy.random.uniform(size=(self.n, self.nobs), low=-.01, high=.01))
+        self.W_ho = theano.shared(numpy.random.uniform(size=(self.n, self.nobs), low=-.01, high=.01), name="W_ho")
         # hidden layer to output (dencoding) weights
-        self.W_zh = theano.shared(numpy.random.uniform(size=(self.nobs, self.n), low=-.01, high=.01))
+        self.W_zh = theano.shared(numpy.random.uniform(size=(self.nobs, self.n), low=-.01, high=.01), name="W_zh")
         # action to hidden layer weights
-        self.W_ka = theano.shared(numpy.random.uniform(size=(self.n, self.nact), low=-.01, high=.01))
+        self.W_ka = theano.shared(numpy.random.uniform(size=(self.n, self.nact), low=-.01, high=.01), name="W_ka")
         # hidden layer to prediction weights (tied decoding weights)
         self.W_yk = self.W_zh
         # hidden layer bias weights
-        self.b_h = theano.shared(numpy.zeros((self.n)))
+        self.b_h = theano.shared(numpy.zeros((self.n)), name="b_h")
         # hidden layer bias weights
-        self.b_k = theano.shared(numpy.zeros((self.n)))
+        self.b_k = theano.shared(numpy.zeros((self.n)), name="b_k")
         # decoder weights
-        self.b_z = theano.shared(numpy.zeros((self.nobs)))
+        self.b_z = theano.shared(numpy.zeros((self.nobs)), name="b_z")
         # decoder tied weights
         self.b_y = self.b_z
         # initial hidden state of the ARNN
-        self.k0 = theano.shared(numpy.zeros((self.n)))
+        self.k0 = theano.shared(numpy.zeros((self.n)), name="k0")
 
         self.params = [
             self.W_hk,
@@ -184,13 +186,36 @@ class ARNN:
         # therefore h0[numpy.newaxis,:] should have shape (1 by n)
         # we can use join to join them to create a (t+1 by n) matrix
 
+        # print h0, h0.type
+        # print self.h, self.h.type
+        # print z0, z0.type
+        # print self.z, self.z.type
+        # sigmoid.0             TensorType(float64, vector)
+        # Subtensor{1::}.0      TensorType(float64, matrix)
+        # sigmoid.0             TensorType(float64, vector)
+        # for{cpu,scan_fn}.3    TensorType(float64, matrix)
+
         # tack on the lingering h0 and z0
         T.join(0, h0[numpy.newaxis,:], self.h)
         T.join(0, z0[numpy.newaxis,:], self.z)
 
+        # print self.h, self.h.type
+        # print self.z, self.h.type
+        # Subtensor{1::}.0      TensorType(float64, matrix)
+        # for{cpu,scan_fn}.3    TensorType(float64, matrix)
+
+        # print theano.printing.pprint(self.h)
+        # print theano.printing.pprint(self.z)
+
+        # print theano.printing.debugprint(self.h)
+        # print theano.printing.debugprint(self.z)
+
+
+
         print "  compiling the prediction function"
         # predict function outputs y for a given x
-        self.predict = theano.function(inputs=[self.o, self.a], outputs=self.y)
+        self.predict = theano.function(inputs=[self.o, self.a], outputs=self.y, mode=MODE)
+        # theano.printing.pydotprint(self.predict)
 
     def constructTrainer(self):
         """
@@ -217,17 +242,17 @@ class ARNN:
         self.ploss = T.mean(T.nnet.binary_crossentropy(self.y, self.o[1:]))
         # autoencoding loss
         self.aloss = T.mean(T.nnet.binary_crossentropy(self.z, self.o))
+
         self.cost =  self.ploss + self.aloss + self.L1_reg*self.L1  + self.L2_reg*self.L2_sqr
         print "  compiling error function"
         # error is a function while cost is the symbolic variable
-        self.error = theano.function(inputs=[self.o,self.a], outputs=self.cost)
+        self.error = theano.function(inputs=[self.o,self.a], outputs=self.cost, mode=MODE)
 
         print "  computing the gradient"
         # gradients on the weights using BPTT
         self.gparams = [T.grad(self.cost, param) for param in self.params]
         print "  compiling gradient function"
-        self.gradients = theano.function(inputs=[self.o, self.a], outputs=self.gparams)
-
+        self.gradients = theano.function(inputs=[self.o, self.a], outputs=self.gparams, mode=MODE)
 
         # learning rate
         self.lr = T.scalar()
@@ -241,13 +266,16 @@ class ARNN:
         # training function
         self.trainStep = theano.function([self.o, self.a, self.lr],
                              self.cost,
-                             updates=updates)
+                             updates=updates,
+                             mode=MODE)
 
     def trainModel(self, observations, actions, learningRate=0.1, epochs=100, shuffle=True):
         """
         Train the ARNN on the provided observations and actions for a given learning rate and number of epochs.
         """
         n_samples = len(observations)
+
+        print observations.shape, actions.shape
 
         print "Training the ARNN..."
         if shuffle:
