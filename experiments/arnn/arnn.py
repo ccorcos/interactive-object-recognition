@@ -61,6 +61,11 @@
 #
 
 
+# momentum
+# dropout
+# stopping condition
+# multiple die
+
 import theano
 import theano.tensor as T
 import numpy
@@ -92,21 +97,19 @@ class ARNN:
         # number of output units
         self.nact = nact
 
-        print "Constructing the ARNN..."
         self.constructModel()
-        print "Constructing the ARNN trainer..."
         self.constructTrainer()
 
     def constructModel(self):
         """
         Construct the computational graph of the ARNN with Theano.
         """
-
+        print "Constructing the ARNN..."
         # observations (where first dimension is time)
         self.o = T.matrix()
         # actions (where first dimension is time)
         self.a = T.matrix()
-
+        print "  creating weights"
         # recurrent (filter) weights as a shared variable
         self.W_hk = theano.shared(numpy.random.uniform(size=(self.n, self.n), low=-.01, high=.01))
         # recurrent (update) weights as a shared variable
@@ -171,15 +174,21 @@ class ARNN:
             h_tp1, z_tp1 = autoencodeStep(k_t, o_t)
             return h_tp1, k_t, y_t, z_tp1
 
+        print "  creating graph"
         [self.h, self.k, self.y, self.z], _ = theano.scan(step,
             sequences=[self.a, self.o[1:]],
             outputs_info=[h0, None, None, None])
 
-        # tack on the lingering h0 and z0
-        tmp = h0[numpy.newaxis]
-        T.join(0, tmp, self.h)
-        T.join(0, z0, self.z)
+        # self.h should be (t by n) dimension.
+        # h0 should be of dimension (n)
+        # therefore h0[numpy.newaxis,:] should have shape (1 by n)
+        # we can use join to join them to create a (t+1 by n) matrix
 
+        # tack on the lingering h0 and z0
+        T.join(0, h0[numpy.newaxis,:], self.h)
+        T.join(0, z0[numpy.newaxis,:], self.z)
+
+        print "  compiling the prediction function"
         # predict function outputs y for a given x
         self.predict = theano.function(inputs=[self.o, self.a], outputs=self.y)
 
@@ -187,7 +196,7 @@ class ARNN:
         """
         Construct the computational graph of Stochastic Gradient Decent (SGD) on the ARNN with Theano.
         """
-
+        print "Constructing the ARNN trainer..."
         # L1 norm
         self.L1 = 0
         self.L1 += abs(self.W_hk.sum())
@@ -209,13 +218,16 @@ class ARNN:
         # autoencoding loss
         self.aloss = T.mean(T.nnet.binary_crossentropy(self.z, self.o))
         self.cost =  self.ploss + self.aloss + self.L1_reg*self.L1  + self.L2_reg*self.L2_sqr
-
-        # gradients on the weights using BPTT
-        self.gparams = [T.grad(self.cost, param) for param in self.params]
-        self.gradients = theano.function(inputs=[self.o, self.a], outputs=self.gparams)
-
+        print "  compiling error function"
         # error is a function while cost is the symbolic variable
         self.error = theano.function(inputs=[self.o,self.a], outputs=self.cost)
+
+        print "  computing the gradient"
+        # gradients on the weights using BPTT
+        self.gparams = [T.grad(self.cost, param) for param in self.params]
+        print "  compiling gradient function"
+        self.gradients = theano.function(inputs=[self.o, self.a], outputs=self.gparams)
+
 
         # learning rate
         self.lr = T.scalar()
@@ -225,6 +237,7 @@ class ARNN:
             for param, gparam in zip(self.params, self.gparams)
         ]
 
+        print "  compiling training function"
         # training function
         self.trainStep = theano.function([self.o, self.a, self.lr],
                              self.cost,
@@ -234,8 +247,9 @@ class ARNN:
         """
         Train the ARNN on the provided observations and actions for a given learning rate and number of epochs.
         """
+        n_samples = len(observations)
 
-        print "Training the RNN..."
+        print "Training the ARNN..."
         if shuffle:
             shuffleInUnison([observations, actions])
 
@@ -243,7 +257,7 @@ class ARNN:
         for epoch in range(epochs):
             print "EPOCH: %d/%d" % (epoch, epochs)
             e = None
-            for i in range(len(inputs)):
+            for i in range(n_samples):
                 e = self.trainStep(observations[i], actions[i], learningRate)
             print "  ", e
         print "DONE"
