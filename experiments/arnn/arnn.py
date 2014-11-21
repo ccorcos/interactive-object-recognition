@@ -109,8 +109,12 @@ class ARNN:
         print "Constructing the ARNN..."
         # observations (where first dimension is time)
         self.o = T.matrix()
+        self.o.tag.test_value = numpy.random.rand(51, 6)
         # actions (where first dimension is time)
         self.a = T.matrix()
+        self.a.tag.test_value = numpy.random.rand(50, 5)
+
+
         print "  creating weights"
         # recurrent (filter) weights as a shared variable
         self.W_hk = theano.shared(numpy.random.uniform(size=(self.n, self.n), low=-.01, high=.01), name="W_hk")
@@ -163,7 +167,6 @@ class ARNN:
         # p(y_t | k_t) = sigmoid(W_yk k_t + b_y)
         # J = error(y_t, o_{t+1})
         def preditStep(h_t, a_t):
-            print self.W_kh.shape, h_t.shape
             k_t = T.nnet.sigmoid(T.dot(self.W_kh, h_t) + T.dot(self.W_ka, a_t) + self.b_k)
             y_t = T.nnet.sigmoid(T.dot(self.W_zh, k_t) + self.b_z)
             return k_t, y_t
@@ -189,30 +192,8 @@ class ARNN:
         # we can use join to join them to create a (t+1 by n) matrix
 
         # tack on the lingering h0 and z0
-        T.join(0, h0[numpy.newaxis,:], self.h)
-        T.join(0, z0[numpy.newaxis,:], self.z)
-
-        # k = [self.k0]
-        # h = []
-        # y = []
-        # z = []
-        # for t in range(self.a.shape[0]:
-        #     h_t, z_tp1 = autoencodeStep(k[t], self.o[t])
-        #     h.append(h_t)
-        #     z.append(z_tp1)
-        #     k_t, y_t = preditStep(h[t], self.a[t])
-        #     k.append(k_t)
-        #     y.append(y_t)
-        #
-        # t = self.o.shape[0]
-        # h_t, z_tp1 = autoencodeStep(k[t], self.o[t])
-        # h.append(h_t)
-        # z.append(z_tp1)
-
-        # self.k = numpy.array(k)
-        # self.h = numpy.array(h)
-        # self.y = numpy.array(y)
-        # self.z = numpy.array(z)
+        self.h = T.join(0, h0[numpy.newaxis,:], self.h)
+        self.z = T.join(0, z0[numpy.newaxis,:], self.z)
 
         print "  compiling the prediction function"
         # predict function outputs y for a given x
@@ -258,6 +239,7 @@ class ARNN:
 
         # learning rate
         self.lr = T.scalar()
+        self.lr.tag.test_value = 0.2
 
         updates = [
             (param, param - self.lr * gparam)
@@ -277,9 +259,10 @@ class ARNN:
         """
         n_samples = len(observations)
 
-        print observations.shape, actions.shape
 
         print "Training the ARNN..."
+        print "observations shape:", observations.shape
+        print "actions shape:", actions.shape
         # if shuffle:
         #     shuffleInUnison([observations, actions])
 
