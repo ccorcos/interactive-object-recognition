@@ -20,7 +20,7 @@ Running Experiment 1:
 Training a RNN on one die.
 """
 
-with open('../datasets/one-die-optimal.pickle', 'rb') as handle:
+with open('../../datasets/one-die-optimal.pickle', 'rb') as handle:
     samples = pickle.load(handle)
 
 # sample = {
@@ -72,7 +72,8 @@ rnn.trainModel(
     inputs=inputs,
     targets=targets,
     learningRate=0.01,
-    epochs=200
+    momentum=0.1,
+    epochs=100
 )
 
 rnn.testModel(inputs[0], targets[0])

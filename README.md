@@ -8,12 +8,9 @@ a model that is very powerful at learning latent variables, in this case, 3D pos
 
 ## To Do
 
-- try rnn with softmax?
-- hmm?
-- my model
+- test rnn with sse vs cross entropy on the lag test.
 - dropout?
 - minibatches
-- momentum
 - stopping criteria
 
 - get the rnn to learn just one die
