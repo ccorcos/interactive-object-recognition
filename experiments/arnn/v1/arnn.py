@@ -222,9 +222,11 @@ class ARNN:
         self.L2_sqr += (self.W_ka ** 2).sum()
 
         # prediction loss
-        self.ploss = T.mean(T.nnet.binary_crossentropy(self.y, self.o[1:]))
+        self.ploss = abs(self.y-self.o[1:]).sum()
+        # self.ploss = T.mean(T.nnet.binary_crossentropy(self.y, self.o[1:]))
         # autoencoding loss
-        self.aloss = T.mean(T.nnet.binary_crossentropy(self.z, self.o))
+        self.aloss = abs(self.z-self.o).sum()
+        # self.aloss = T.mean(T.nnet.binary_crossentropy(self.z, self.o))
 
         self.cost =  self.ploss + self.aloss + self.L1_reg*self.L1  + self.L2_reg*self.L2_sqr
         print "  compiling error function"
@@ -277,7 +279,7 @@ class ARNN:
         print ""
 
     def testModel(self, obs, act):
-        y = self.predict(obs)
+        y = self.predict(obs, act)
         print 'obs'.center(len(obs[0])*2) + '  |  ' + 'y'.center(len(y[0])*2) + '  |  ' + 'act'.center(len(y[0])*2)
         print ''
         for i in range(len(y)):

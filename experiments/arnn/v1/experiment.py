@@ -55,8 +55,8 @@ arnn = ARNN(
 arnn.trainModel(
     observations=observations,
     actions=actions,
-    learningRate=0.01,
-    epochs=200
+    learningRate=0.02,
+    epochs=20
 )
 
 arnn.testModel(observations[0], actions[0])

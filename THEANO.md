@@ -8,7 +8,7 @@ Also, try running your program with
 
     THEANO_FLAGS="optimizer=None" python program.py
 
-This will give you line numbers and more information.
+This will giv e you line numbers and more information.
 
 
 Also, for any symbolic variables defined, it helps to give them test values which can be used
