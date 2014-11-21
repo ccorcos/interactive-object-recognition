@@ -76,7 +76,7 @@ import cPickle as pickle
 import warnings
 warnings.simplefilter("ignore")
 
-MODE ='DebugMode'
+MODE ='FAST_COMPILE'
 
 def shuffleInUnison(arr):
     rng_state = numpy.random.get_state()
@@ -186,30 +186,10 @@ class ARNN:
         # therefore h0[numpy.newaxis,:] should have shape (1 by n)
         # we can use join to join them to create a (t+1 by n) matrix
 
-        # print h0, h0.type
-        # print self.h, self.h.type
-        # print z0, z0.type
-        # print self.z, self.z.type
-        # sigmoid.0             TensorType(float64, vector)
-        # Subtensor{1::}.0      TensorType(float64, matrix)
-        # sigmoid.0             TensorType(float64, vector)
-        # for{cpu,scan_fn}.3    TensorType(float64, matrix)
 
         # tack on the lingering h0 and z0
-        T.join(0, h0[numpy.newaxis,:], self.h)
-        T.join(0, z0[numpy.newaxis,:], self.z)
-
-        # print self.h, self.h.type
-        # print self.z, self.h.type
-        # Subtensor{1::}.0      TensorType(float64, matrix)
-        # for{cpu,scan_fn}.3    TensorType(float64, matrix)
-
-        # print theano.printing.pprint(self.h)
-        # print theano.printing.pprint(self.z)
-
-        # print theano.printing.debugprint(self.h)
-        # print theano.printing.debugprint(self.z)
-
+        # T.join(0, h0[numpy.newaxis,:], self.h)
+        # T.join(0, z0[numpy.newaxis,:], self.z)
 
 
         print "  compiling the prediction function"
@@ -278,8 +258,8 @@ class ARNN:
         print observations.shape, actions.shape
 
         print "Training the ARNN..."
-        if shuffle:
-            shuffleInUnison([observations, actions])
+        # if shuffle:
+        #     shuffleInUnison([observations, actions])
 
         # training
         for epoch in range(epochs):
