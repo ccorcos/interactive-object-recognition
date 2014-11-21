@@ -123,7 +123,7 @@ class ARNN:
         # action to hidden layer weights
         self.W_ka = theano.shared(numpy.random.uniform(size=(self.n, self.nact), low=-.01, high=.01), name="W_ka")
         # hidden layer to prediction weights (tied decoding weights)
-        self.W_yk = self.W_zh
+        # self.W_yk = self.W_zh
         # hidden layer bias weights
         self.b_h = theano.shared(numpy.zeros((self.n)), name="b_h")
         # hidden layer bias weights
@@ -131,7 +131,7 @@ class ARNN:
         # decoder weights
         self.b_z = theano.shared(numpy.zeros((self.nobs)), name="b_z")
         # decoder tied weights
-        self.b_y = self.b_z
+        # self.b_y = self.b_z
         # initial hidden state of the ARNN
         self.k0 = theano.shared(numpy.zeros((self.n)), name="k0")
 
@@ -163,15 +163,16 @@ class ARNN:
         # p(y_t | k_t) = sigmoid(W_yk k_t + b_y)
         # J = error(y_t, o_{t+1})
         def preditStep(h_t, a_t):
+            print self.W_kh.shape, h_t.shape
             k_t = T.nnet.sigmoid(T.dot(self.W_kh, h_t) + T.dot(self.W_ka, a_t) + self.b_k)
-            y_t = T.nnet.sigmoid(T.dot(self.W_yk, k_t) + self.b_y)
+            y_t = T.nnet.sigmoid(T.dot(self.W_zh, k_t) + self.b_z)
             return k_t, y_t
 
         # There will always be one more observation than there are actions
         # take care of it upfront so we can use scan
         h0, z0 = autoencodeStep(self.k0, self.o[0])
 
-        def step(h_t, a_t, o_t):
+        def step(a_t, o_t, h_t):
             k_t, y_t = preditStep(h_t, a_t)
             h_tp1, z_tp1 = autoencodeStep(k_t, o_t)
             return h_tp1, k_t, y_t, z_tp1
@@ -181,16 +182,37 @@ class ARNN:
             sequences=[self.a, self.o[1:]],
             outputs_info=[h0, None, None, None])
 
+
         # self.h should be (t by n) dimension.
         # h0 should be of dimension (n)
         # therefore h0[numpy.newaxis,:] should have shape (1 by n)
         # we can use join to join them to create a (t+1 by n) matrix
 
-
         # tack on the lingering h0 and z0
-        # T.join(0, h0[numpy.newaxis,:], self.h)
-        # T.join(0, z0[numpy.newaxis,:], self.z)
+        T.join(0, h0[numpy.newaxis,:], self.h)
+        T.join(0, z0[numpy.newaxis,:], self.z)
 
+        # k = [self.k0]
+        # h = []
+        # y = []
+        # z = []
+        # for t in range(self.a.shape[0]:
+        #     h_t, z_tp1 = autoencodeStep(k[t], self.o[t])
+        #     h.append(h_t)
+        #     z.append(z_tp1)
+        #     k_t, y_t = preditStep(h[t], self.a[t])
+        #     k.append(k_t)
+        #     y.append(y_t)
+        #
+        # t = self.o.shape[0]
+        # h_t, z_tp1 = autoencodeStep(k[t], self.o[t])
+        # h.append(h_t)
+        # z.append(z_tp1)
+
+        # self.k = numpy.array(k)
+        # self.h = numpy.array(h)
+        # self.y = numpy.array(y)
+        # self.z = numpy.array(z)
 
         print "  compiling the prediction function"
         # predict function outputs y for a given x

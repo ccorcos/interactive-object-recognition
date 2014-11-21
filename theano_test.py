@@ -58,7 +58,7 @@ def actionPredictionStep(h_t, a_t):
     y_t = T.nnet.sigmoid(T.dot(W_yk, k_t) + b_y)
     return k_t, y_t
 
-def step(h_t, a_t, o_t):
+def step(a_t, o_t, h_t):
     k_t, y_t = actionPredictionStep(h_t, a_t)
     h_tp1, z_tp1 = observationStep(k_t, o_t)
     return h_tp1, k_t, y_t, z_tp1
@@ -94,3 +94,8 @@ actions = numpy.random.uniform(size=(10, 50, 5), low=-.01, high=.01)
 predict(observations[0], actions[0])
 
 # cost(observations[0], actions[0])
+
+
+
+# ValueError: shapes (24,24) and (5,) not aligned: 24 (dim 1) != 5 (dim 0)
+# Apply node that caused the error: dot(W_kh_copy, <TensorType(float64, vector)>)

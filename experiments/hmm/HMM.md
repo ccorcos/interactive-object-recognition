@@ -9,8 +9,10 @@ I'm curious if it is possible to use backprogagation through time to train a HMM
 
 But we'll have to take a look at the math.
 
-$$p(o_t|h_t) = \sigma(W_oh \dot h_t + b_o)
-p(h_{t+1}|h_t) = \sigma(W_hh \dot h_t + b_h)$$
+$$
+p(o_t|h_t) = \sigma(W_{oh} h_t + b_o)
+p(h_{t+1}|h_t) = \sigma(W_{hh} h_t + b_h)
+$$
 
 Now I suppose we could do backprogation through time, but the challenging part is that we need to compute the gradient at each step conditioned on all previous observations. This ought to be pretty challenging in Theano.
 
