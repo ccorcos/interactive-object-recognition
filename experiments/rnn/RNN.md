@@ -13,12 +13,17 @@ seems to be that the model cannot generate the latent pose which is crucual to
 condition against.
 
 
-# V1
+
+# RNN/V1
 
 Basic implementation.
 
 Not sure whether to use binary cross-entropy error or sum square error
 
-# V2
+# RNN/V2
 
 Momentum implemented
+
+# RNN/V3
+
+Dropout not yet implemented

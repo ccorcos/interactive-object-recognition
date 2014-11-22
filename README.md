@@ -9,9 +9,9 @@ a model that is very powerful at learning latent variables, in this case, 3D pos
 ## To Do
 
 - test rnn with sse vs cross entropy on the lag test.
-- dropout?
-- minibatches
-- stopping criteria
+- dropout with rnn
+- dropout and momentum in ARNN
+
 
 - get the rnn to learn just one die
 - get the rnn to learn a set of dice
