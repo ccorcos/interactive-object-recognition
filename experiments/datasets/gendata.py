@@ -12,3 +12,5 @@ oneDieSet = [dice[0]]
 
 # _ = createDataset(dice, filename='set1-not-optimal-50.pickle', numActions=50, optimal=False)
 # _ = createDataset(dice, filename='set1-die-optimal-8.pickle', numActions=8, optimal=True)
+
+_ = createDataset(oneDieSet, filename='one-die-optimal-1000.pickle', numActions=1000, optimal=True)

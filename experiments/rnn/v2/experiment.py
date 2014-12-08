@@ -4,9 +4,11 @@
 # Trying a RNN implementation using a_t and o_t to predict o_{t+1} through a
 # recurrent hidden layer.
 
-# This experiment is just to see if we can learn a single die. This should be
-# trivially easy because every o_t and a_t have a direct correspondence to the
-# o_{t+1}.
+# This experiment is just to see if we can learn a single die. This should be trivially easy because every o_t and a_t have a direct correspondence to the o_{t+1}.
+
+# This experiment uses a very long dataset, 1000 actions and an RNN training
+# with momentum.
+
 
 import theano
 import theano.tensor as T
@@ -20,7 +22,7 @@ Running Experiment 1:
 Training a RNN on one die.
 """
 
-with open('../../datasets/one-die-optimal.pickle', 'rb') as handle:
+with open('../../datasets/one-die-optimal-1000.pickle', 'rb') as handle:
     samples = pickle.load(handle)
 
 # sample = {
@@ -61,7 +63,7 @@ nextProbs = numpy.array(nextProbs, dtype=theano.config.floatX)
 
 
 rnn = RNN(
-    n = 500,
+    n = 100,
     nin = 11,
     nout = 6,
     L1_reg = .01,
@@ -73,7 +75,7 @@ rnn.trainModel(
     targets=targets,
     learningRate=0.01,
     momentum=0.1,
-    epochs=100
+    epochs=50
 )
 
 rnn.testModel(inputs[0], targets[0])

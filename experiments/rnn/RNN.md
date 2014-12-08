@@ -26,4 +26,4 @@ Momentum implemented
 
 # RNN/V3
 
-Dropout not yet implemented
+Train on the real nextProbs -- doesnt work!

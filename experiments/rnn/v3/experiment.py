@@ -20,8 +20,11 @@ Running Experiment 1:
 Training a RNN on one die.
 """
 
-with open('../../datasets/one-die-optimal.pickle', 'rb') as handle:
+# with open('../../datasets/one-die-optimal.pickle', 'rb') as handle:
+with open('../../datasets/set1-not-optimal-50.pickle', 'rb') as handle:
     samples = pickle.load(handle)
+
+
 
 # sample = {
 #     'name':die.name,
@@ -61,7 +64,7 @@ nextProbs = numpy.array(nextProbs, dtype=theano.config.floatX)
 
 
 rnn = RNN(
-    n = 500,
+    n = 50,
     nin = 11,
     nout = 6,
     L1_reg = .01,
@@ -70,10 +73,10 @@ rnn = RNN(
 
 rnn.trainModel(
     inputs=inputs,
-    targets=targets,
+    targets=nextProbs,
     learningRate=0.01,
-    momentum=0.1,
+    momentum=0.6,
     epochs=100
 )
 
-rnn.testModel(inputs[0], targets[0])
+rnn.testModel(inputs[0], nextProbs[0])
