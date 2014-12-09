@@ -40,7 +40,7 @@ rnn.trainModel(
     inputs=seq,
     targets=targets,
     learningRate=0.1,
-    epochs=100
+    epochs=1000
 )
 
 seqs = xrange(10)
@@ -61,5 +61,4 @@ for seq_num in seqs:
     ax2.set_ylim((-0.1, 1.1))
     ax2.set_title('solid: true output, dashed: model output (prob)')
 
-    plt.show()
-    raw_input('waiting...')
+plt.show()

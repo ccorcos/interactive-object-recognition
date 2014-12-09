@@ -8,16 +8,16 @@ a model that is very powerful at learning latent variables, in this case, 3D pos
 
 ## To Do
 
-- test rnn with sse vs cross entropy on the lag test.
-- dropout with rnn
-- dropout and momentum in ARNN
+- test the scanop on the compiled theano function in v3
+- get v4 working with all the classes
+- v5 add deeper layers!
 
 
-- get the rnn to learn just one die
-- get the rnn to learn a set of dice
-- write up BACKGROUND.md and RNN.md
-- everything again on my own model
-- everything again with a HMM
+- dropout is for overfitting... not for underfitting
+- try relu's for faster training?
+- try deeper layers.
+
+
 
 ## Getting Started
 
