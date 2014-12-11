@@ -28,7 +28,9 @@ Momentum implemented
 
 Train on the real nextProbs -- doesnt work!
 
-
 # RNN/V4
 
-Trying deeper RNN
+refactor with classes. doenst really work though :/
+
+# RNN/V5
+
