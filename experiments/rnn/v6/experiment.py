@@ -65,10 +65,13 @@ nextProbs = numpy.array(nextProbs, dtype=theano.config.floatX)
 
 rnn = RNN(
     n = 50,
+    m = 60,
     nin = 11,
+    min = 30,
     nout = 6,
-    L1_reg = .01,
-    L2_reg = .01
+    mout = 20,
+    L1_reg = 0,
+    L2_reg = 0
 )
 
 rnn.trainModel(
@@ -76,7 +79,7 @@ rnn.trainModel(
     targets=targets,
     learningRate=0.01,
     momentum=0.6,
-    epochs=100
+    epochs=500
 )
 
 rnn.testModel(inputs[0], targets[0])

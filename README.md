@@ -7,6 +7,14 @@ of a die after an action given all previous actions and observations. Thus, we n
 a model that is very powerful at learning latent variables, in this case, 3D pose.
 
 ## To Do
+- refactor v6 with mlp
+- try with relu's, tanh's, different initialization, softmax
+- back to my arnn
+
+
+
+- perhaps try a softmax with a simple rnn
+- try a deep rnn
 
 - test the scanop on the compiled theano function in v3
 - get v4 working with all the classes

@@ -34,3 +34,5 @@ refactor with classes. doenst really work though :/
 
 # RNN/V5
 
+refactor works
+
