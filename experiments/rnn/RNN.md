@@ -36,3 +36,8 @@ refactor with classes. doenst really work though :/
 
 refactor works
 
+# RNN/V6
+
+deep transitions to input oupur and transitions
+
+

@@ -97,3 +97,4 @@ class MultiInputLayer:
             return self.activation(linear)
         else:
             return linear
+
