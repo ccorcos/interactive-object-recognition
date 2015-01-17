@@ -20,3 +20,11 @@ to test the functionality of the program as it goes so you can get a line number
 Then make sure you set the flag when you run it.
 
     THEANO_FLAGS="optimizer=None,compute_test_value=raise" python program.py
+
+# Parallelization
+
+http://deeplearning.net/software/theano/tutorial/multi_cores.html
+
+For macs: 
+
+http://statistics.berkeley.edu/computing/blas

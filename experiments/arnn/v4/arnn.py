@@ -25,19 +25,23 @@ import warnings
 warnings.simplefilter("ignore")
 
 MODE ='FAST_COMPILE'
+# MODE ='FAST_RUN'
+# MODE='DebugMode'
 
 class RNN:
-    def __init__(self, n_enc=[], n_dec=[], n_act=[], n_hid=[], L1_reg=0.0, L2_reg=0.0):
+    def __init__(self, n_obs=[], n_pred=[], n_act=[], n_filt=[], n_trans=[], L1_reg=0.0, L2_reg=0.0, transitionActivation=T.nnet.sigmoid, outputActivation=T.nnet.sigmoid):
         """
+
         INPUTS:
-        n_enc:  layer sizes for the encoder
-        n_dec:  layer sizes for the decoder
+        n_obs:  layer sizes for the observation
+        n_pred:  layer sizes for the predictor
         n_act:  layer sizes for the actions
-        n_hid:  layer sizes for the hidden transitions
+        n_filt:  layer sizes for the filtering on observation
+        n_trans:  layer sizes for the transition on action
 
         MODEL:
         o_t: observation at time t
-        z_t: is the observation reconstruction
+        a_t: action at time t
         y_t: is the prediction
         h_t: the state representation
         k_t: the predictive state representation
@@ -46,35 +50,38 @@ class RNN:
                               o_t              a_t
                                |                |
                                |                |
-                       encoder |         action |
+                   observation |         action |
                                |                |
                                |                |
                     filter     ▼   transform    ▼
          k_{t-1} ----------▶  h_t ----------▶  k_t ----------▶  h_{t+1}
-                               |                |
-                               |                |
-                       decoder |      predictor |
-                               |                |
-                               |                |
-                               ▼                ▼
-                              z_t              y_t
+                                                |
+                                                |
+                                      predictor |
+                                                |
+                                                |
+                                                ▼
+                                               y_t
 
 
         LOSS:
-        Auto Encoder:   loss = distance(z_t, o_t)
         Predictor:      loss = distance(y_t, o_{t+1})
-
         """
         # regularization hyperparameters
         self.L1_reg = float(L1_reg)
         self.L2_reg = float(L2_reg)
 
-        self.n_enc = n_enc
-        self.n_dec = n_dec
+        self.n_obs = n_obs
+        self.n_pred = n_pred
         self.n_act = n_act
-        self.n_hid = n_hid
+        self.n_filt = n_filt
+        self.n_trans = n_trans
 
-        assert(n_hid[0] is n_dec[0])
+        self.transitionActivation = transitionActivation
+        self.outputActivation = outputActivation
+
+        assert(n_filt[0] is n_pred[0])
+        assert(n_obs[0] is n_pred[-1])
 
         self.constructModel()
         self.constructTrainer()
@@ -87,30 +94,44 @@ class RNN:
         print "Constructing the RNN..."
 
         # intialize the forward feed layers
-        self.encoderFF   = ForwardFeed(n=self.n_enc, activation=T.tanh, name='encoderFF')
-        self.decoderFF   = ForwardFeed(n=self.n_dec, activation=T.tanh, name='decoderFF')
-        self.predictorFF = ForwardFeed(n=self.n_dec, activation=T.tanh, name='predictorFF')
-        self.transformFF = ForwardFeed(n=self.n_hid, activation=T.tanh, name='transformFF')
-        self.actionFF    = ForwardFeed(n=self.n_act, activation=T.tanh, name='actionFF')
-        self.filterFF    = ForwardFeed(n=self.n_hid, activation=T.tanh, name='filterFF')
+        self.observationFF = ForwardFeed(n=self.n_obs, 
+                                         activation=self.transitionActivation,
+                                         name='observationFF')
+
+        self.filterFF = ForwardFeed(n=self.n_filt, 
+                                    activation=self.transitionActivation, 
+                                    name='filterFF')
+
+        self.actionFF = ForwardFeed(n=self.n_act, 
+                                    activation=self.transitionActivation, 
+                                    name='actionFF')
+
+        self.transformFF = ForwardFeed(n=self.n_trans, 
+                                       activation=self.transitionActivation, 
+                                       name='transformFF')
+        
+        self.predictorFF = ForwardFeed(n=self.n_pred, 
+                                       activation=self.transitionActivation, 
+                                       outputActivation=self.outputActivation,
+                                       name='predictorFF')
+
 
         # initialize the h and k layers to connect all the forward feed layers
-        self.hiddenStateLayer =  MultiInputLayer(nins=[self.n_hid[-1], self.n_enc[-1]],
-                                                 nout=self.n_hid[0],
-                                                 activation=T.tanh,
+        self.hiddenStateLayer =  MultiInputLayer(nins=[self.n_filt[-1], self.n_obs[-1]],
+                                                 nout=self.n_trans[0],
+                                                 activation=self.transitionActivation,
                                                  name='hiddenStateLayer')
         
-        self.predictiveStateLayer =  MultiInputLayer(nins=[self.n_hid[-1], self.n_act[-1]],
-                                                     nout=self.n_hid[0],
-                                                     activation=T.tanh,
+        self.predictiveStateLayer =  MultiInputLayer(nins=[self.n_trans[-1], self.n_act[-1]],
+                                                     nout=self.n_filt[0],
+                                                     activation=self.transitionActivation,
                                                      name='predictiveStateLayer')
 
-        self.layers = [self.encoderFF, self.decoderFF, self.predictorFF, self.actionFF, self.filterFF, self.hiddenStateLayer, self.predictiveStateLayer]
+        self.layers = [self.observationFF, self.transformFF, self.predictorFF, self.actionFF, self.filterFF, self.hiddenStateLayer, self.predictiveStateLayer]
 
         def autoencodeStep(k_tm1, o_t):
-            h_t = self.hiddenStateLayer.compute([self.filterFF.compute(k_tm1), self.encoderFF.compute(o_t)])
-            z_t = self.decoderFF.compute(h_t)
-            return h_t, z_t
+            h_t = self.hiddenStateLayer.compute([self.filterFF.compute(k_tm1), self.observationFF.compute(o_t)])
+            return h_t
 
 
         def predictStep(h_t, a_t):
@@ -127,21 +148,21 @@ class RNN:
         self.a.tag.test_value = numpy.random.rand(50, 5)
 
         # initial predictive state of the RNN
-        self.k0 = theano.shared(numpy.zeros((self.n_hid[0])), name="k0")
+        self.k0 = theano.shared(numpy.zeros((self.n_filt[0])), name="k0")
 
         # There will always be one more observation than there are actions
         # take care of it upfront so we can use scan
-        h0, z0 = autoencodeStep(self.k0, self.o[0])
+        h0 = autoencodeStep(self.k0, self.o[0])
 
         def step(a_t, o_t, h_t):
             k_t, y_t = predictStep(h_t, a_t)
-            h_tp1, z_tp1 = autoencodeStep(k_t, o_t)
-            return h_tp1, k_t, y_t, z_tp1
+            h_tp1 = autoencodeStep(k_t, o_t)
+            return h_tp1, k_t, y_t
 
         print "  creating graph"
-        [self.h, self.k, self.y, self.z], _ = theano.scan(step,
+        [self.h, self.k, self.y], _ = theano.scan(step,
             sequences=[self.a, self.o[1:]],
-            outputs_info=[h0, None, None, None])
+            outputs_info=[h0, None, None])
 
         # self.h should be (t by n) dimension.
         # h0 should be of dimension (n)
@@ -150,7 +171,6 @@ class RNN:
 
         # tack on the lingering h0 and z0
         self.h = T.join(0, h0[numpy.newaxis,:], self.h)
-        self.z = T.join(0, z0[numpy.newaxis,:], self.z)
 
         print "  compiling the prediction function"
         # predict function outputs y for a given x
@@ -173,19 +193,27 @@ class RNN:
         # Use mean instead of sum to be more invariant to the network size and the minibatch size.
         
         # L1 norm
-        self.L1 = reduce(operator.add, map(lambda x: abs(x.mean()), self.weights))
+        self.L1 = reduce(operator.add, map(lambda x: abs(x).mean(), self.weights))
         # square of L2 norm
         self.L2_sqr = reduce(operator.add, map(lambda x: (x ** 2).mean(), self.weights))
 
-        # prediction loss
-        self.ploss = abs(self.y-self.o[1:]).mean()
-        # self.ploss = T.mean(T.nnet.binary_crossentropy(self.y, self.o[1:]))
-        # autoencoding loss
-        # self.aloss = abs(self.z-self.o).mean()
-        self.aloss = 0
-        # self.aloss = T.mean(T.nnet.binary_crossentropy(self.z, self.o))
+        # prediction loss, normalized to 1. 0 is optimal. 1 is naive. >1 is just wrong.
+        self.ploss = abs(self.y-self.o[1:]).mean()*self.n_pred[-1]
 
-        self.cost =  self.ploss + self.aloss + self.L1_reg*self.L1  + self.L2_reg*self.L2_sqr
+        # the problem here is that we must fo up to come down. so we need to reshape this 
+        # surface so that doing a little worse could mean doing a little better.
+        # guessing all zeros leads to an error of 1/5 on the output which is a ploss of 1.
+        # guessing a value everytime at random is worst case going go give you and error of 2/5
+        # on for each step. So we want to incentivise guessing at least once and hopefully we'll
+        # find a nice solution from there.
+        
+        # compensate = -0.5 + abs(1 - self.y.sum(axis=1).mean())
+        # compensate = -1 + abs(1 - self.y.sum(axis=1).mean())
+        # compensate = T.switch(T.gt(compensate,0), 0, compensate)
+
+        compensate = 0
+
+        self.cost =  self.ploss**2 + self.L1_reg*self.L1  + self.L2_reg*self.L2_sqr + compensate
         
         # print "  compiling error function"
         # error is a function while cost is the symbolic variable
@@ -212,8 +240,12 @@ class RNN:
             updates.append((param, param + update))
 
         print "  compiling training function"
+        printY = theano.printing.Print("y:")
+        printO = theano.printing.Print("o[1:]:")
+        printLoss = theano.printing.Print("ploss:")
         # training function
         self.trainStep = theano.function([self.o, self.a, self.lr, self.mom],
+                             # [self.cost, printY(self.y), printO(self.o[1:]), printLoss(self.ploss)],
                              self.cost,
                              updates=updates,
                              mode=MODE)
@@ -228,11 +260,13 @@ class RNN:
 
         # training
         for epoch in range(epochs):
-            print "EPOCH: %d/%d" % (epoch, epochs)
+            print "EPOCH: %d/%d" % (epoch+1, epochs)
             e = None
             for i in range(n_samples):
+                # e, printY, printO, printLoss = self.trainStep(observations[i], actions[i], learningRate, momentum)
                 e = self.trainStep(observations[i], actions[i], learningRate, momentum)
             print "  ", e
+            # print "  ", printY, printO, printLoss
         print "DONE"
         print ""
 
@@ -243,6 +277,7 @@ class RNN:
         for i in range(len(y)):
             print sparkprob(obs[i]) + '  |  ' + sparkprob(y[i]) + '  |  ' +  sparkprob(act[i])
 
+        print sparkprob(obs[len(y)])
     def save(self):
         pass
 

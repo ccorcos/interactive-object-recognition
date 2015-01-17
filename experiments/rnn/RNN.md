@@ -13,7 +13,6 @@ seems to be that the model cannot generate the latent pose which is crucual to
 condition against.
 
 
-
 # RNN/V1
 
 Basic implementation.
@@ -38,6 +37,8 @@ refactor works
 
 # RNN/V6
 
-deep transitions to input oupur and transitions
+deep transitions to input, output, and transitions
+2014 How to Construct Deep Recurrent Neural Networks - Bengio
 
+# RNN/V7
 

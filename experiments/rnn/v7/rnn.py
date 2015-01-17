@@ -19,16 +19,6 @@ import warnings
 warnings.simplefilter("ignore")
 
 
-
-# 
-# 
-# nin
-# 
-# 
-# 
-# 
-# 
-
 def shuffleInUnison(arr):
     rng_state = numpy.random.get_state()
     for item in arr:
@@ -37,7 +27,7 @@ def shuffleInUnison(arr):
 
 
 class RNN:
-    def __init__(self, n=0, m=0, nin=0, min=0, nout=0, mout=0, L1_reg=0.0, L2_reg=0.0):
+    def __init__(self, n=0, m=0, nin=0, min=0, nout=0, mout=0, L1_reg=0.0, L2_reg=0.0, transitionActivation=T.nnet.sigmoid, outputActivation=T.nnet.sigmoid):
         """
         Initialize a Recurrent Nerual Network layer sizes and regularization hyperparameters.
 
@@ -83,6 +73,9 @@ class RNN:
         # number of hidden output units
         self.mout = mout
 
+        self.transitionActivation = transitionActivation
+        self.outputActivation = outputActivation
+
         print "Constructing the RNN..."
         self.constructModel()
         print "Constructing the RNN trainer..."
@@ -118,30 +111,30 @@ class RNN:
 
         self.inputHiddenLayer = Layer(  nin=self.nin,
                                         nout=self.min,
-                                        activation=T.tanh,
+                                        activation=self.transitionActivation,
                                         name='inputHiddenLayer')
 
 
         # the input and the hidden layer go into the input layer
         self.transitionHiddenLayer = MultiInputLayer(   nins=[self.min, self.n],
                                                         nout=self.m,
-                                                        activation=T.tanh,
+                                                        activation=self.transitionActivation,
                                                         name='transitionHiddenLayer')
 
         self.hiddenLayer = Layer(   nin=self.m,
                                     nout=self.n,
-                                    activation=T.tanh,
+                                    activation=self.transitionActivation,
                                     name='hiddenLayer')
 
         self.outputHiddenLayer = Layer( nin=self.n,
                                         nout=self.mout,
-                                        activation=T.tanh,
+                                        activation=self.transitionActivation,
                                         name='outputHiddenLayer')
 
         # the hidden layer output goes to the output
         self.outputLayer = Layer( nin=self.mout,
                              nout=self.nout,
-                             activation=T.nnet.sigmoid,
+                             activation=self.outputActivation,
                              name='outputLayer')
 
         self.layers = [self.inputHiddenLayer, self.hiddenLayer, self.transitionHiddenLayer, self.outputHiddenLayer, self.outputLayer]
@@ -157,6 +150,7 @@ class RNN:
         # next we need to scan over all steps for a given array of observations
         # input (where first dimension is time)
         self.x = T.matrix()
+        self.x.tag.test_value = numpy.random.rand(50, 11)
         # initial hidden state of the RNN
         self.h0 = theano.shared(numpy.zeros((self.n)))
 
@@ -190,6 +184,7 @@ class RNN:
 
         # target (where first dimension is time)
         self.t = T.matrix()
+        self.t.tag.test_value = numpy.random.rand(50, 6)
 
         # error between output and target
         self.loss = T.mean(T.nnet.binary_crossentropy(self.y, self.t))
@@ -200,8 +195,21 @@ class RNN:
         self.gparams = [T.grad(self.cost, param) for param in self.params]
         # self.gradients = theano.function(inputs=[self.x, self.t], outputs=self.gparams)
 
-        # error is a function while cost is the symbolic variable
-        # self.error = theano.function(inputs=[self.x,self.t], outputs=self.cost)
+        self.costf = theano.function(inputs=[self.x,self.t], outputs=self.cost)
+
+        # def correctPrediction(yi, ti):
+        #     if T.argmax(yi) == T.argmax(ti):
+        #         return 1.
+        #     else:
+        #         return 0.
+
+        # [self.correct,], _ = theano.scan(correctPrediction,
+        #                         sequences=[self.y, self.t])
+
+        # self.correct = [correctPrediction(yi,ti) for (yi,ti) in zip(self.y, self.t)]
+
+        # self.correctf = theano.function(inputs=[self.y,self.t], outputs=self.correct)
+
 
         # learning rate
         self.lr = T.scalar()
@@ -228,13 +236,13 @@ class RNN:
         if shuffle:
             shuffleInUnison([inputs, targets])
 
+        self.trainingError = None
         # training
         for epoch in range(epochs):
             print "EPOCH: %d/%d" % (epoch, epochs)
-            e = None
             for i in range(len(inputs)):
-                e = self.trainStep(inputs[i], targets[i], learningRate, momentum)
-            print "  ", e
+                self.trainingError = self.trainStep(inputs[i], targets[i], learningRate, momentum)
+            print "  ", self.trainingError
         print "DONE"
         print ""
 

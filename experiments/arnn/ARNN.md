@@ -29,20 +29,24 @@ Autoencoding Kalman Filter Recurrent Neural Network
 Its also deep with deep input, output and hidden transitions.
 
 
+# V4
 
+Tried some incremental training. And experimented with the cost function a little bit. No cigar.
 
-Theano Performance.
+        # the problem here is that we must fo up to come down. so we need to reshape this 
+        # surface so that doing a little worse could mean doing a little better.
+        # guessing all zeros leads to an error of 1/5 on the output which is a ploss of 1.
+        # guessing a value everytime at random is worst case going go give you and error of 2/5
+        # on for each step. So we want to incentivise guessing at least once and hopefully we'll
+        # find a nice solution from there.
+        
+        # compensate = -0.5 + abs(1 - self.y.sum(axis=1).mean())
+        # compensate = -1 + abs(1 - self.y.sum(axis=1).mean())
+        # compensate = T.switch(T.gt(compensate,0), 0, compensate)
 
-How can I test whether Theano is properly leveraging my GPU and multiple CPU cores?
-http://deeplearning.net/software/theano/tutorial/multi_cores.html
-http://deeplearning.net/software/theano/tutorial/using_gpu.html
+        compensate = 0
 
-Is T.grad supposed to leverage this?
+# v5
 
-How can I save a model / compiled functions so I dont have to wait forever to run it again, etc?
-http://deeplearning.net/software/theano/tutorial/loading_and_saving.html
-
-How do I run large models? Use sklearn tools? Run on a remote cluster?
-
-pylearn2!
-http://deeplearning.net/software/pylearn2/
+try relu without nan issue?
+try binary_crossentropy with softmax.

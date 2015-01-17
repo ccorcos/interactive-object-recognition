@@ -16,15 +16,13 @@ from sparkprob import sparkprob
 from rnn import *
 
 print """
-Running Experiment 1:
-Training a RNN on one die.
+Running Experiment 6:
+Training a RNN on one die with deep inputs, outputs, and transitions.
 """
 
 with open('../../datasets/one-die-optimal.pickle', 'rb') as handle:
 # with open('../../datasets/set1-not-optimal-50.pickle', 'rb') as handle:
     samples = pickle.load(handle)
-
-
 
 # sample = {
 #     'name':die.name,
@@ -78,8 +76,8 @@ rnn.trainModel(
     inputs=inputs,
     targets=targets,
     learningRate=0.01,
-    momentum=0.6,
-    epochs=500
+    momentum=0.1,
+    epochs=2000
 )
 
 rnn.testModel(inputs[0], targets[0])

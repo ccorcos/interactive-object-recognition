@@ -7,24 +7,34 @@ of a die after an action given all previous actions and observations. Thus, we n
 a model that is very powerful at learning latent variables, in this case, 3D pose.
 
 ## To Do
-- refactor v6 with mlp
-- try with relu's, tanh's, different initialization, softmax
-- back to my arnn
+read about initialization for the ARNN
+ - right weights
+ - greeduily pretrain!
+RNN forward feed layer util.
+MLP layer util.
+Fresh install on linux machine. Install cuda, etc. Run theano models on there.
+
+correct prediction errors. get hidden units. mlp to predict the object.
 
 
 
-- perhaps try a softmax with a simple rnn
-- try a deep rnn
+pylearn2!
+http://deeplearning.net/software/pylearn2/
 
-- test the scanop on the compiled theano function in v3
-- get v4 working with all the classes
-- v5 add deeper layers!
+use ROS for testing implementation?
 
 
-- dropout is for overfitting... not for underfitting
-- try relu's for faster training?
-- try deeper layers.
 
+
+- supervised train a model to predict the object based on the hidden weights
+- iterate through actions, get predictions, predict object, minimum expected entropy, maximum expected entropy
+- use a tensor model
+
+
+
+
+- back to my arnn?
+- try crossentropy with clipping?
 
 
 ## Getting Started
@@ -32,3 +42,11 @@ a model that is very powerful at learning latent variables, in this case, 3D pos
     pip install sparkprob
     pip install se3
     sudo python dice/setup.py develop
+
+
+## just some random thoughts
+
+Why dont we think about rnn training as some sort of graph optimization?
+Given some inputs, follow the positive weights to the output. 
+Define this as a backbone in the RNN that resists change.
+Can we use some form of max-flow min-cut?
