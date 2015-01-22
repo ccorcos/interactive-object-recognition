@@ -42,3 +42,4 @@ deep transitions to input, output, and transitions
 
 # RNN/V7
 
+Supervised learning -- predict the correct dice

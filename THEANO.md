@@ -23,8 +23,8 @@ Then make sure you set the flag when you run it.
 
 # Parallelization
 
-http://deeplearning.net/software/theano/tutorial/multi_cores.html
+Must install a g++ with OpenMP support!
 
-For macs: 
+    brew install ??
 
-http://statistics.berkeley.edu/computing/blas
+GPU, cant on mac!

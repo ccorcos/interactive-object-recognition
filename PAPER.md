@@ -9,3 +9,25 @@ The beauty of such a model is that its can be repurposed in several ways. It can
 It also inherently uses localization. As demonstrated by disambiguating the object. It can do efficient localization by searching for an efficient means of determining its location / what object it is observing.
 
 
+
+
+------------------------------------------------------------
+
+
+Outline:
+
+Deep learning:
+ - unsupervised learning
+ - autoencoders for pretraining
+ - recurrent neural networks
+ - recurrent autoencoder for ASR
+
+Goal:
+ - unsupervised learning for state estimation
+ - pretraining for supervising learning on hidden state
+
+Models:
+ - RNN for unsupervised
+ - ARNN for unsupervised
+ - RNN for supervised
+ - RNN for unsupervised

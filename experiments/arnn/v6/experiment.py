@@ -50,6 +50,8 @@ observations = []
 nextProbs = []
 for sample in samples:
     actions.append(sample['actions'])
+    # obs = sample['observations']
+    # map(lambda x: 0.1 if x==0 else 0.9, obs)
     observations.append(sample['observations'])
     nextProbs.append(sample['nextProbs'])
 
@@ -59,7 +61,7 @@ nextProbs = numpy.array(nextProbs, dtype=theano.config.floatX)
 
 """
 
-                              o_t              a_t
+                            y_{t-1}              a_t
                                |                |
                                |                |
                    observation |         action |
@@ -87,20 +89,21 @@ rnn = RNN(
     ff_trans=[50],
     ff_act=[50],
     ff_pred=[50],
-    L1_reg = .5,
-    L2_reg = 1.0,
+    L1_reg = .01,
+    L2_reg = .0,
     transitionActivation=layer.tanh,
     outputActivation=layer.softmax
 )
 
-shuffleInUnison([observations, actions])
+# shuffleInUnison([observations, actions])
 
+# you can only learn one sequence!
 rnn.trainModel(
-    observations=observations,
-    actions=actions,
+    observations=observations[0:1,:,:],
+    actions=actions[0:1,:,:],
     learningRate=0.1,
-    momentum=0.2,
-    epochs=500
+    momentum=0.1,
+    epochs=200
 )
 rnn.testModel(observations[0], actions[0])
 
@@ -108,19 +111,19 @@ rnn.testModel(observations[0], actions[0])
 # rnn.predict(observations[0], actions[0])
 
 
-
+"""
 # What if we do pretraining? The problem looks like an initialization problem.
 # So lets train only on the first transition. We can move forward after.
 
 
-# i = observations.shape[0] # number of trials
-# n = 1 # number of steps
-# lr = 0.1
-# mom = 0.2
-# e = 10 # epochs
+i = observations.shape[0] # number of trials
+n = 1 # number of steps
+lr = 0.1
+mom = 0.2
+e = 10 # epochs
 
 
-# steps = observations.shape[1]
+steps = observations.shape[1]
 
 # # print "one step of one trial"
 # err = rnn.trainModel(observations=observations[0:(i+1),0:(n+1),:],actions=actions[0:(i+1),0:n,:],learningRate=lr,momentum=mom,epochs=e)
@@ -135,31 +138,33 @@ rnn.testModel(observations[0], actions[0])
 #   if err < 0.2:
 #     n += 1
 
-# def randRange(min, max):
-#   return int(round(random.random()*(max-min)+min))
+def randRange(min, max):
+  return int(round(random.random()*(max-min)+min))
 
 
 # Optimize backwards
 # Or forwards, it really shouldnt matter
 
-# err = rnn.trainModel(observations=observations[0:i,(steps-n-1):,:],actions=actions[0:i,(steps-n-1):,:],learningRate=lr,momentum=mom,epochs=e)
-# rnn.testModel(observations[i-1, (steps-n-1):, :], actions[i-1, (steps-n-1):, :])
+err = rnn.trainModel(observations=observations[0:i,(steps-n-1):,:],actions=actions[0:i,(steps-n-1):,:],learningRate=lr,momentum=mom,epochs=e)
+rnn.testModel(observations[i-1, (steps-n-1):, :], actions[i-1, (steps-n-1):, :])
 
-# n = 2
-# while n < steps:
-#   if err > 1:
-#     lr *= 1.1
-#     lr = min(lr, 0.9)
-#     mom *= 0.9
-#     mom = max(mom, 0.1)
-#   else: 
-#     lr *= 0.95
-#     lr = max(lr, 0.1)
-#     mom *= 1.1
-#     mom = min(mom, 0.9)
-#   print "n:", n
-#   print "err:", err
-#   err = rnn.trainModel(observations=observations[0:i,(steps-n-1):,:],actions=actions[0:i,(steps-n-1):,:],learningRate=lr,momentum=mom,epochs=e)
-#   rnn.testModel(observations[randRange(0, i-1), (steps-n-1):, :], actions[randRange(0, i-1),(steps-n-1):, :])
-#   if err < 0.4:
-#     n += 1
+n = 2
+while n < steps:
+  if err > 1:
+    lr *= 1.1
+    lr = min(lr, 0.9)
+    mom *= 0.9
+    mom = max(mom, 0.1)
+  else: 
+    lr *= 0.95
+    lr = max(lr, 0.1)
+    mom *= 1.1
+    mom = min(mom, 0.9)
+  print "n:", n
+  print "err:", err
+  err = rnn.trainModel(observations=observations[0:i,(steps-n-1):,:],actions=actions[0:i,(steps-n-1):,:],learningRate=lr,momentum=mom,epochs=e)
+  rnn.testModel(observations[randRange(0, i-1), (steps-n-1):, :], actions[randRange(0, i-1),(steps-n-1):, :])
+  if err < 0.4:
+    n += 1
+
+"""

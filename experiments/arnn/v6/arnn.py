@@ -62,7 +62,7 @@ class RNN:
         k_t: the predictive state representation
 
 
-                              o_t              a_t
+                            y_{t-1}              a_t
                                |                |
                                |                |
                    observation |         action |
@@ -145,7 +145,7 @@ class RNN:
 
         self.layers = [self.observationFF, self.transformFF, self.predictorFF, self.actionFF, self.filterFF, self.hiddenStateLayer, self.predictiveStateLayer]
 
-        def autoencodeStep(k_tm1, o_t):
+        def observeStep(k_tm1, o_t):
             h_t = self.hiddenStateLayer.compute([self.filterFF.compute(k_tm1), self.observationFF.compute(o_t)])
             return h_t
 
@@ -165,20 +165,18 @@ class RNN:
 
         # initial predictive state of the RNN
         self.k0 = theano.shared(numpy.zeros((self.n_hidden)), name="k0")
+        self.y0 = self.predictorFF.compute(self.k0)
 
-        # There will always be one more observation than there are actions
-        # take care of it upfront so we can use scan
-        h0 = autoencodeStep(self.k0, self.o[0])
-
-        def step(a_t, o_t, h_t):
+        def step(a_t, k_tm1, y_tm1):
+            h_t = observeStep(k_tm1, y_tm1)
             k_t, y_t = predictStep(h_t, a_t)
-            h_tp1 = autoencodeStep(k_t, o_t)
-            return h_tp1, k_t, y_t
+            return k_t, y_t, h_t
+
 
         print "  creating graph"
-        [self.h, self.k, self.y], _ = theano.scan(step,
-            sequences=[self.a, self.o[1:]],
-            outputs_info=[h0, None, None])
+        [self.k, self.y, self.h], _ = theano.scan(step,
+            sequences=[self.a],
+            outputs_info=[self.k0, self.y0, None])
 
         # self.h should be (t by n) dimension.
         # h0 should be of dimension (n)
@@ -186,11 +184,11 @@ class RNN:
         # we can use join to join them to create a (t+1 by n) matrix
 
         # tack on the lingering h0 and z0
-        self.h = T.join(0, h0[numpy.newaxis,:], self.h)
+        self.y = T.join(0, self.y0[numpy.newaxis,:], self.y)
 
         print "  compiling the prediction function"
         # predict function outputs y for a given x
-        self.predict = theano.function(inputs=[self.o, self.a], outputs=self.y, mode=MODE)
+        self.predict = theano.function(inputs=[self.a], outputs=self.y, mode=MODE)
 
     def constructTrainer(self):
         """
@@ -213,11 +211,11 @@ class RNN:
         # square of L2 norm
         self.L2_sqr = reduce(operator.add, map(lambda x: (x ** 2).mean(), self.weights))
 
-        if self.outputActivation is T.nnet.softmax:
-            self.ploss = T.mean(T.nnet.binary_crossentropy(self.y,self.o[0:]))
+        if self.outputActivation == softmax:
+            self.ploss = T.mean(T.nnet.binary_crossentropy(self.y,self.o))
         else:
             # prediction loss, normalized to 1. 0 is optimal. 1 is naive. >1 is just wrong.
-            self.ploss = T.mean(abs(self.y-self.o[1:]))*self.n_obs
+            self.ploss = T.mean(abs(self.y-self.o))*self.n_obs
 
         self.cost =  self.ploss + self.L1_reg*self.L1  + self.L2_reg*self.L2_sqr
         
@@ -278,13 +276,13 @@ class RNN:
         return e
 
     def testModel(self, obs, act):
-        y = self.predict(obs, act)
+        y = self.predict(act)
         print 'obs'.center(len(obs[0])*2) + '  |  ' + 'y'.center(len(y[0])*2) + '  |  ' + 'act'.center(len(y[0])*2)
         print ''
-        for i in range(len(y)):
+        for i in range(len(y)-1):
             print sparkprob(obs[i]) + '  |  ' + sparkprob(y[i]) + '  |  ' +  sparkprob(act[i])
 
-        print sparkprob(obs[len(y)])
+        # print sparkprob(obs[len(y)])
     def save(self):
         pass
 

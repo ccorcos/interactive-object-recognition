@@ -48,5 +48,11 @@ Tried some incremental training. And experimented with the cost function a littl
 
 # v5
 
-try relu without nan issue?
-try binary_crossentropy with softmax.
+relu works, but sometimes nan more often
+softmax definitely helps
+tried incremental optimization
+
+# v6
+
+What if we only give actions and optimize the observation predictions?
+This would only work for one dice. but suppose we condition on the first n observations and expect a correct prediction for the rest?
