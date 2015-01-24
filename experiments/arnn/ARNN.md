@@ -55,4 +55,16 @@ tried incremental optimization
 # v6
 
 What if we only give actions and optimize the observation predictions?
-This would only work for one dice. but suppose we condition on the first n observations and expect a correct prediction for the rest?
+This would only work for one dice. 
+
+# v7
+
+Suppose we condition on the first n observations and expect a correct prediction for the rest?
+
+works much better on shorter training sets.
+
+#v8 
+
+* maybe try not optimizing against the first 5 as well. because its clearly overfitting this part based on the unique combination of observations and actions.
+
+* try with multiple different dice.

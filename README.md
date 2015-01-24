@@ -7,7 +7,10 @@ of a die after an action given all previous actions and observations. Thus, we n
 a model that is very powerful at learning latent variables, in this case, 3D pose.
 
 ## To Do
-What if we plug the prediction into the observation and only show the actions.
+ARNN v7 predicting the rest based on first 5 optimal moves!
+try raising 5, longer dataset? smaller dataset?
+compute the overall performance
+
 
 RNN, ARNN for supervised learning entirely!
 

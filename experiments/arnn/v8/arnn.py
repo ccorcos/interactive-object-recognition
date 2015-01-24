@@ -221,10 +221,10 @@ class RNN:
         self.L2_sqr = reduce(operator.add, map(lambda x: (x ** 2).mean(), self.weights))
 
         if self.outputActivation == softmax:
-            self.ploss = T.mean(T.nnet.binary_crossentropy(self.y,self.o[1:]))
+            self.ploss = T.mean(T.nnet.binary_crossentropy(self.y[self.warmUp:],self.o[self.warmUp+1:]))
         else:
             # prediction loss, normalized to 1. 0 is optimal. 1 is naive. >1 is just wrong.
-            self.ploss = T.mean(abs(self.y-self.o[1:]))*self.n_obs
+            self.ploss = T.mean(abs(self.y[self.warmUp:]-self.o[self.warmUp+1:]))*self.n_obs
 
         self.cost =  self.ploss + self.L1_reg*self.L1  + self.L2_reg*self.L2_sqr
         

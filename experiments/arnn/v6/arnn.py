@@ -184,7 +184,7 @@ class RNN:
         # we can use join to join them to create a (t+1 by n) matrix
 
         # tack on the lingering h0 and z0
-        self.y = T.join(0, self.y0[numpy.newaxis,:], self.y)
+        # self.y = T.join(0, self.y0[numpy.newaxis,:], self.y)
 
         print "  compiling the prediction function"
         # predict function outputs y for a given x
@@ -212,10 +212,10 @@ class RNN:
         self.L2_sqr = reduce(operator.add, map(lambda x: (x ** 2).mean(), self.weights))
 
         if self.outputActivation == softmax:
-            self.ploss = T.mean(T.nnet.binary_crossentropy(self.y,self.o))
+            self.ploss = T.mean(T.nnet.binary_crossentropy(self.y,self.o[1:]))
         else:
             # prediction loss, normalized to 1. 0 is optimal. 1 is naive. >1 is just wrong.
-            self.ploss = T.mean(abs(self.y-self.o))*self.n_obs
+            self.ploss = T.mean(abs(self.y-self.o[1:]))*self.n_obs
 
         self.cost =  self.ploss + self.L1_reg*self.L1  + self.L2_reg*self.L2_sqr
         
@@ -279,10 +279,10 @@ class RNN:
         y = self.predict(act)
         print 'obs'.center(len(obs[0])*2) + '  |  ' + 'y'.center(len(y[0])*2) + '  |  ' + 'act'.center(len(y[0])*2)
         print ''
-        for i in range(len(y)-1):
+        for i in range(len(y)):
             print sparkprob(obs[i]) + '  |  ' + sparkprob(y[i]) + '  |  ' +  sparkprob(act[i])
 
-        # print sparkprob(obs[len(y)])
+        print sparkprob(obs[len(y)])
     def save(self):
         pass
 

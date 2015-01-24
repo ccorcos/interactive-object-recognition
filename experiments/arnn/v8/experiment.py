@@ -81,7 +81,7 @@ nextProbs = numpy.array(nextProbs, dtype=theano.config.floatX)
 
 trials = 30
 length = 12
-warmUp = 6
+warmUp = 5
 
 rnn = RNN(
     warmUp=6,
