@@ -68,3 +68,20 @@ works much better on shorter training sets.
 * maybe try not optimizing against the first 5 as well. because its clearly overfitting this part based on the unique combination of observations and actions.
 
 * try with multiple different dice.
+
+cost AND error reported are only after the warmup period
+
+
+
+
+Make it savable!
+
+Layer gets a weight and a bias.
+allow it to be passed into forwardfeed, and RNN.
+create save and load helper functions.
+save params, initial config, momentums, updates, etc. so you can continue training from where you left off.
+
+
+get the hidden state values. Run through a MLP to predict the dice. Train and report errors.
+
+Then at each step consider each action, the predicted next feature, and the predicted dice likelihood distribution. Choose the action that has a minimal entropy of this distribution.

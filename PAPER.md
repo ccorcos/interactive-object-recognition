@@ -13,6 +13,7 @@ It also inherently uses localization. As demonstrated by disambiguating the obje
 
 ------------------------------------------------------------
 
+"Unsupervised State Estimation using Deep Learning for Interactive Object Recognition"
 
 Outline:
 

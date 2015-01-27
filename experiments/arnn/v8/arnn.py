@@ -193,7 +193,8 @@ class RNN:
         self.ypred = T.argmax(self.y, axis=1)
         self.opred = T.argmax(self.o[1:], axis=1)
 
-        self.error = T.mean(T.neq(self.ypred, self.opred))
+        # self.error = T.mean(T.neq(self.ypred, self.opred))
+        self.error = T.mean(T.neq(self.ypred[self.warmUp:], self.opred[self.warmUp:]))
 
         print "  compiling the prediction function"
         # predict function outputs y for a given x

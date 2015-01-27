@@ -16,8 +16,8 @@ import random
 
 
 print """
-Running Experiment 7:
-Training an RNN on one die.
+Running Experiment 8:
+Training an RNN on the set 1 dice.
 """
 
 # move this into the experiment.py file
@@ -28,8 +28,8 @@ def shuffleInUnison(arr):
         numpy.random.set_state(rng_state)
 
 
-with open('../../datasets/one-die-optimal.pickle', 'rb') as handle:
-# with open('../../datasets/set1-die-optimal-8.pickle', 'rb') as handle:
+# with open('../../datasets/one-die-optimal.pickle', 'rb') as handle:
+with open('../../datasets/set1-die-optimal-8.pickle', 'rb') as handle:
     samples = pickle.load(handle)
 
 # sample = {
@@ -50,8 +50,6 @@ observations = []
 nextProbs = []
 for sample in samples:
     actions.append(sample['actions'])
-    # obs = sample['observations']
-    # map(lambda x: 0.1 if x==0 else 0.9, obs)
     observations.append(sample['observations'])
     nextProbs.append(sample['nextProbs'])
 
@@ -79,12 +77,12 @@ nextProbs = numpy.array(nextProbs, dtype=theano.config.floatX)
 
 """
 
-trials = 30
-length = 12
+trials = 10000
+length = 8
 warmUp = 5
 
 rnn = RNN(
-    warmUp=6,
+    warmUp=warmUp,
     n_obs=6,
     n_act=5,
     n_hidden=80,
@@ -101,12 +99,11 @@ rnn = RNN(
 
 # shuffleInUnison([observations, actions])
 
-
 rnn.trainModel(
     observations=observations[0:trials,0:length+1,:],
     actions=actions[0:trials,0:length,:],
-    learningRate=0.1,
-    momentum=0.1,
-    epochs=100,
+    learningRate=0.0005,
+    momentum=0.5,
+    epochs=10000,
 )
 rnn.testModel(observations[0,0:length+1,:], actions[0,0:length,:])
