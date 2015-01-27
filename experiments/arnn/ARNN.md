@@ -71,16 +71,18 @@ works much better on shorter training sets.
 
 cost AND error reported are only after the warmup period
 
+#v9
+
+load and save a model.
 
 
 
-Make it savable!
 
-Layer gets a weight and a bias.
-allow it to be passed into forwardfeed, and RNN.
-create save and load helper functions.
-save params, initial config, momentums, updates, etc. so you can continue training from where you left off.
 
+
+
+
+#v10 - todo
 
 get the hidden state values. Run through a MLP to predict the dice. Train and report errors.
 

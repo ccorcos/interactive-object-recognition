@@ -20,13 +20,6 @@ Running Experiment 8:
 Training an RNN on the set 1 dice.
 """
 
-# move this into the experiment.py file
-def shuffleInUnison(arr):
-    rng_state = numpy.random.get_state()
-    for item in arr:
-        numpy.random.shuffle(item)
-        numpy.random.set_state(rng_state)
-
 
 # with open('../../datasets/one-die-optimal.pickle', 'rb') as handle:
 with open('../../datasets/set1-die-optimal-8.pickle', 'rb') as handle:
@@ -42,20 +35,20 @@ with open('../../datasets/set1-die-optimal-8.pickle', 'rb') as handle:
 #     'nextProbs':nextProbs
 # }
 
+# shuffle the order... to a known one ;)
+# numpy.random.set_state(0)
+# numpy.random.shuffle(samples)
+
 # nextProbs is the correct likelihood of the next feature. This will be used to
 # guage how the modeled learned, but it won't be used to train the model.
 
-actions = []
-observations = []
-nextProbs = []
-for sample in samples:
-    actions.append(sample['actions'])
-    observations.append(sample['observations'])
-    nextProbs.append(sample['nextProbs'])
+values = lambda arr, key: map(lamdba x: x[key], arr)
+toArray = lambda x: numpy.array(x, dtype=theano.config.floatX)
 
-actions = numpy.array(actions, dtype=theano.config.floatX)
-observations = numpy.array(observations, dtype=theano.config.floatX)
-nextProbs = numpy.array(nextProbs, dtype=theano.config.floatX)
+actions =      toArray(values(samples, 'actions'))
+observations = toArray(values(samples, 'observations'))
+nextProbs =    toArray(values(samples, 'nextProbs'))
+
 
 """
 
@@ -81,7 +74,7 @@ trials = 10000
 length = 8
 warmUp = 5
 
-rnn = RNN(
+rnn = RNN.init(
     warmUp=warmUp,
     n_obs=6,
     n_act=5,
@@ -96,8 +89,6 @@ rnn = RNN(
     transitionActivation=layer.tanh,
     outputActivation=layer.softmax
 )
-
-# shuffleInUnison([observations, actions])
 
 rnn.trainModel(
     observations=observations[0:trials,0:length+1,:],
