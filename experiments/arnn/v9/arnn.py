@@ -366,13 +366,18 @@ class RNN:
         print ""
         return cost, error
 
-    def testModel(self, obs, act):
+    def visualize(self, obs, act):
         y, ypred, error = self.predict(obs, act)
         print 'obs'.center(len(obs[0])*2) + '  |  ' + 'y'.center(len(y[0])*2) + '  |  ' + 'act'.center(len(y[0])*2)
         print ''
-        for i in range(1, len(y)):
+        print sparkprob(obs[0]) + '  |  ' + sparkprob([0]*6) + '  |  ' +  sparkprob(act[0])
+        for i in range(1, len(obs)):
             print sparkprob(obs[i]) + '  |  ' + sparkprob(y[i-1]) + '  |  ' +  sparkprob(act[i])
+        print "error: " + str(error)
 
-        print sparkprob(obs[len(y)])
-        print error
-
+    def test(self, observations, actions):
+        results = numpy.array(map(lambda obs, act: self.predict(obs, act), observations, actions))
+        y = results[:,0]
+        ypred = results[:,1]
+        error = results[:,2]
+        print "error: " + str(error.mean())

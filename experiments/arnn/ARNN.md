@@ -73,7 +73,11 @@ cost AND error reported are only after the warmup period
 
 #v9
 
-load and save a model.
+TODO:
+load and save a model. make sure this works!
+- visualize
+- test
+
 
 
 
