@@ -20,9 +20,10 @@ Running Experiment 8:
 Training an RNN on the set 1 dice.
 """
 
+# dataset = 'datasets/one-die-optimal.pickle'
+dataset = 'datasets/set1-die-optimal-8.pickle'
 
-# with open('../../datasets/one-die-optimal.pickle', 'rb') as handle:
-with open('../../datasets/set1-die-optimal-8.pickle', 'rb') as handle:
+with open('../../'+dataset, 'rb') as handle:
     samples = pickle.load(handle)
 
 # sample = {
@@ -70,11 +71,11 @@ nextProbs =    toArray(values(samples, 'nextProbs'))
 
 """
 
-trials = 10000
+trials = int(numpy.floor(actions.shape[0]/3.0))
 length = 8
 warmUp = 5
 
-rnn = RNN.init(
+rnn = RNN.create(
     warmUp=warmUp,
     n_obs=6,
     n_act=5,
@@ -90,11 +91,35 @@ rnn = RNN.init(
     outputActivation=layer.softmax
 )
 
-rnn.trainModel(
+lr = 0.0005
+mom = 0.2
+epochs = 1
+
+rnn.train(
     observations=observations[0:trials,0:length+1,:],
     actions=actions[0:trials,0:length,:],
-    learningRate=0.0005,
-    momentum=0.2,
-    epochs=2000,
+    learningRate=lr,
+    momentum=mom,
+    epochs=epochs,
 )
-rnn.testModel(observations[0,0:length+1,:], actions[0,0:length,:])
+
+rnn.visualize(observations[0,0:length+1,:], actions[0,0:length,:])
+
+testErr = rnn.test(observations[trails:,0:length+1,:], actions[trails:,0:length,:])
+
+filename = 'rnn.pickle'
+rnn.save(filename, lr=lr, mom=mom, epochs=epochs, dataset=dataset, notes="""
+  80 hidden nodes with single deep 50 node forward feeds. Trained on the set1 
+  8 optimal move dataset with a warmup of 5.
+  """)
+
+
+# Sometime later, lets load it.
+
+rnn2, lr2, mom2, dataset2, epochs2, notes2 = RNN.load(filename)
+
+rnn2.visualize(observations[0,0:length+1,:], actions[0,0:length,:])
+
+testErr2 = rnn2.test(observations[trails:,0:length+1,:], actions[trails:,0:length,:])
+
+print testErr2, "should equal", testErr

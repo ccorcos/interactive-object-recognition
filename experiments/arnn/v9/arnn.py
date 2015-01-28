@@ -9,6 +9,7 @@ import numpy
 from sparkprob import sparkprob
 import operator
 from layer import *
+import cPickle as pickle
 
 # hide warnings
 import warnings
@@ -17,6 +18,8 @@ warnings.simplefilter("ignore")
 # MODE ='FAST_COMPILE'
 MODE ='FAST_RUN'
 # MODE='DebugMode'
+
+fmt = lambda x: "{:12.8f}".format(x)
 
 class RNN:
     @classmethod
@@ -70,10 +73,8 @@ class RNN:
                                                 ▼
                                                y_t
 
-
-        LOSS:
-        Predictor:      loss = distance(y_t, o_{t+1})
         """
+
         rnn = cls()
         # regularization hyperparameters
         rnn.L1_reg = float(L1_reg)
@@ -100,9 +101,25 @@ class RNN:
     def load(cls, filename):
 
         print "Loading from saved file: " + filename
-        print ""
-        # data = load(filename)
+        f = open(filename, 'wb')
+        data = pickle.load(fL)
+        f.close()
+        print "  loaded"
+
         rnn = cls()
+
+        print ""
+        print "model parameters:"
+        for key in ['n_hidden', 'ff_obs', 'ff_act', 'ff_pred', 'ff_filt', 'ff_trans', 'transitionActivation', 'outputActivation']:
+            print key + ": " + str(data[key])
+        print ""
+        print "training parameters:"
+        for key in ['L1_reg','L2_reg', 'lr', 'mom', 'epochs', 'warmUp', 'dataset']:
+            print key + ": " + str(data[key])
+        # probably print out what was loaded...
+        print ""
+        print data['notes']
+        print ""
 
         rnn.warmUp = data['warmUp']
         rnn.L1_reg = data['L1_reg']
@@ -127,11 +144,10 @@ class RNN:
         rnn.constructModel()
         rnn.constructTrainer()
 
-        return rnn, data['lr'], data['mom'], data['dataset']
+        return rnn, data['lr'], data['mom'], data['dataset'], data['epochs'], data['notes']
 
-    def save(self, filename, lr=None, mom=None, dataset=None):
+    def save(self, filename, lr=None, mom=None, dataset=None, epochs=None notes=None):
         # pass the learning rate, momentum, and dataset used to train it for future reference.
-        print ""
         print "Saving model to file: " + filename
         saved = {
             'warmUp': self.warmUp,
@@ -161,9 +177,15 @@ class RNN:
             'lr': lr,
             'mom': mom,
             'dataset': dataset, 
+            'notes': notes,
+            'epochs': epochs
         }
 
-        # save(filename)
+        f = open(filename, 'wb')
+        pickle.dump(saved, f,  protocol=cPickle.HIGHEST_PROTOCOL)
+        f.close()
+        print "  saved"
+
 
     def constructModel(self):
         """
@@ -171,6 +193,7 @@ class RNN:
         """
         
         print "Constructing the RNN..."
+        print "  initializing layers"
 
         # intialize the forward feed layers
         self.observationFF = ForwardFeed(n=[self.n_obs]+self.ff_obs, 
@@ -249,7 +272,7 @@ class RNN:
             k_t, y_t = predictStep(h_t, a_t)
             return y_t, k_t, h_t
 
-        print "  creating graph"
+        print "  creating computational graph"
 
         # step through the first i observations
         [y1, k1, h1], _ = theano.scan(step,
@@ -345,7 +368,7 @@ class RNN:
                              updates=updates,
                              mode=MODE)
 
-    def trainModel(self, observations, actions, learningRate=0.1, momentum=0.2, epochs=100):
+    def train(self, observations, actions, learningRate=0.1, momentum=0.2, epochs=100):
         """
         Train the RNN on the provided observations and actions for a given learning rate and number of epochs.
         """
@@ -360,13 +383,13 @@ class RNN:
             print "EPOCH: %d/%d" % (epoch+1, epochs)
             for i in range(n_samples):
                 cost, error = self.trainStep(observations[i], actions[i], learningRate, momentum)
-            print "  ", cost
-            print "  ", error
+            print "  cost: " + fmt(cost) + " error: " + fmt(error)
         print "DONE"
         print ""
         return cost, error
 
     def visualize(self, obs, act):
+        print "Visualizing trail..."
         y, ypred, error = self.predict(obs, act)
         print 'obs'.center(len(obs[0])*2) + '  |  ' + 'y'.center(len(y[0])*2) + '  |  ' + 'act'.center(len(y[0])*2)
         print ''
@@ -376,8 +399,11 @@ class RNN:
         print "error: " + str(error)
 
     def test(self, observations, actions):
+        print "Testing on a dataset..."
         results = numpy.array(map(lambda obs, act: self.predict(obs, act), observations, actions))
         y = results[:,0]
         ypred = results[:,1]
         error = results[:,2]
-        print "error: " + str(error.mean())
+        e = error.mean()
+        print "error: " + str(e)
+        return e
