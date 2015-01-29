@@ -101,8 +101,8 @@ class RNN:
     def load(cls, filename):
 
         print "Loading from saved file: " + filename
-        f = open(filename, 'wb')
-        data = pickle.load(fL)
+        f = open(filename, 'rb')
+        data = pickle.load(f)
         f.close()
         print "  loaded"
 
@@ -146,7 +146,7 @@ class RNN:
 
         return rnn, data['lr'], data['mom'], data['dataset'], data['epochs'], data['notes']
 
-    def save(self, filename, lr=None, mom=None, dataset=None, epochs=None notes=None):
+    def save(self, filename, lr=None, mom=None, dataset=None, epochs=None, notes=None):
         # pass the learning rate, momentum, and dataset used to train it for future reference.
         print "Saving model to file: " + filename
         saved = {
@@ -171,7 +171,7 @@ class RNN:
                 'predictorFF': self.predictorFF.save(),
                 'hiddenStateLayer': self.hiddenStateLayer.save(),
                 'predictiveStateLayer': self.predictiveStateLayer.save(),
-            }
+            },
             'k0': self.k0.get_value().tolist(),
             'momentums': map(lambda m: m.get_value().tolist(), self.momentums),
             'lr': lr,
@@ -182,7 +182,7 @@ class RNN:
         }
 
         f = open(filename, 'wb')
-        pickle.dump(saved, f,  protocol=cPickle.HIGHEST_PROTOCOL)
+        pickle.dump(saved, f,  protocol=pickle.HIGHEST_PROTOCOL)
         f.close()
         print "  saved"
 
@@ -260,9 +260,9 @@ class RNN:
         # view the first warmUp observations, then be able to halucinate the rest!
 
         # initial k0, the prior
-        if self.k0_init:
+        if maybe(lambda: self.k0_init):
             self.k0_init = numpy.array(self.k0_init)
-            assert(k0_init.shape[0] is n_hidden)
+            assert(self.k0_init.shape[0] is self.n_hidden)
             self.k0 = theano.shared(self.k0_init, name="k0")
         else:
             self.k0 = theano.shared(numpy.zeros((self.n_hidden)), name="k0")
@@ -320,7 +320,7 @@ class RNN:
         self.weights = reduce(operator.add, map(lambda x: x.weights, self.layers))
         # for every parameter, we maintain it's last update to user gradient decent with momentum
 
-        if self.momentums_init:
+        if maybe(lambda: self.momentums_init):
             self.momentums = [theano.shared(numpy.array(m)) for m in self.momentums_init]
         else:
             self.momentums = [theano.shared(numpy.zeros(param.get_value(borrow=True).shape, dtype=theano.config.floatX)) for param in self.params]
@@ -332,7 +332,7 @@ class RNN:
         # square of L2 norm
         self.L2_sqr = reduce(operator.add, map(lambda x: (x ** 2).mean(), self.weights))
 
-        if self.outputActivation == softmax:
+        if self.outputActivation is 'softmax':
             self.ploss = T.mean(T.nnet.binary_crossentropy(self.y[self.warmUp:],self.o[self.warmUp+1:]))
         else:
             # prediction loss, normalized to 1. 0 is optimal. 1 is naive. >1 is just wrong.
@@ -376,26 +376,27 @@ class RNN:
 
         print "Training the RNN..."
 
-        cost = None
-        error = None
+        cost = 100
+        error = 100
         # training
         for epoch in range(epochs):
             print "EPOCH: %d/%d" % (epoch+1, epochs)
             for i in range(n_samples):
                 cost, error = self.trainStep(observations[i], actions[i], learningRate, momentum)
-            print "  cost: " + fmt(cost) + " error: " + fmt(error)
+            print "  cost: " + fmt(float(cost)) + " error: " + fmt(float(error))
         print "DONE"
         print ""
         return cost, error
 
     def visualize(self, obs, act):
-        print "Visualizing trail..."
+        print "Visualizing trial..."
         y, ypred, error = self.predict(obs, act)
         print 'obs'.center(len(obs[0])*2) + '  |  ' + 'y'.center(len(y[0])*2) + '  |  ' + 'act'.center(len(y[0])*2)
         print ''
         print sparkprob(obs[0]) + '  |  ' + sparkprob([0]*6) + '  |  ' +  sparkprob(act[0])
-        for i in range(1, len(obs)):
+        for i in range(1, len(act)):
             print sparkprob(obs[i]) + '  |  ' + sparkprob(y[i-1]) + '  |  ' +  sparkprob(act[i])
+        print sparkprob(obs[len(obs)-1]) + '  |  ' + sparkprob(y[len(obs)-2]) + '  |  ' + sparkprob([0]*5)
         print "error: " + str(error)
 
     def test(self, observations, actions):
@@ -407,3 +408,4 @@ class RNN:
         e = error.mean()
         print "error: " + str(e)
         return e
+

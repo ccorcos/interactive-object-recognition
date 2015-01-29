@@ -25,7 +25,7 @@ activations = {
     'cappedrelu': cappedrelu,
     'sigmoid': sigmoid,
     'tanh': tanh,
-    'softmax', softmax
+    'softmax': softmax
 }
 
 def maybe(func):
@@ -57,18 +57,20 @@ class Layer:
 
         W_init=None
         b_init=None
+        W = None
+        b = None
 
-        if saved:
-            W_init = saved['W_init']
-            b_init = saved['b_init']
+        if saved is not None:
+            W_init = numpy.array(saved['W_init'])
+            b_init = numpy.array(saved['b_init'])
 
-        if W_init:
-            assert(W_init and b_init)
+        if W_init is not None:
+            assert(W_init is not None and b_init is not None)
 
-        if W_init:
+        if W_init is not None:
             assert(W_init.shape[0] is nout)
-            assert(W_init.shape[1]] is nin)
-            W = theano.shared(numpy.array(W_init),name=name+'.W')
+            assert(W_init.shape[1] is nin)
+            W = theano.shared(W_init,name=name+'.W')
         else:
             W = theano.shared(
                 numpy.random.uniform(
@@ -79,9 +81,9 @@ class Layer:
                 name=name+'.W'
             )
 
-        if b_init:
+        if b_init is not None:
             assert(b_init.shape[0] is nout)
-            b = theano.shared(numpy.array(b_init), name=name+'.b')
+            b = theano.shared(b_init, name=name+'.b')
         else:
             b = theano.shared(numpy.zeros((nout,)), name=name+'.b')
 
@@ -123,22 +125,22 @@ class MultiInputLayer:
         Ws_init = None
         b_init = None
 
-        if saved:
+        if saved is not None:
             Ws_init = saved['Ws_init']
             b_init = saved['b_init']
 
-        if Ws_init:
-            assert(Ws_init and b_init)
+        if Ws_init is not None:
+            assert(Ws_init is not None and b_init is not None)
 
         Ws = []
-        if Ws_init:
+        if Ws_init is not None:
             assert(len(Ws_init) is len(nins))
             for i in range(len(nins)):
                 nin = nins[i]
                 W_init = numpy.array(Ws_init[i])
-                assert(Ws_init.shape[0] is nout)
-                assert(Ws_init.shape[1] is nin)
-                W = theano.shared(Ws_init, name=name+'['+ str(i) + '].W')
+                assert(W_init.shape[0] is nout)
+                assert(W_init.shape[1] is nin)
+                W = theano.shared(W_init, name=name+'['+ str(i) + '].W')
                 Ws.append(W)
         else:
             for i in range(len(nins)):
@@ -153,7 +155,8 @@ class MultiInputLayer:
                 )
                 Ws.append(W)
 
-        if b_init:
+        b = None
+        if b_init is not None:
             b_init = numpy.array(b_init)
             assert(b_init.shape[0] is nout)
             b = theano.shared(b_init, name=name+'.b')
@@ -167,7 +170,7 @@ class MultiInputLayer:
 
     def save(self):
         return {
-            'Ws_init': map(lambda W: W.get_value().tolist(), self.Ws)
+            'Ws_init': map(lambda W: W.get_value().tolist(), self.Ws),
             'b_init': self.b.get_value().tolist()
         }
 
@@ -205,7 +208,7 @@ class ForwardFeed:
         assert(len(n) is not 0)
 
         if saved:
-            assert(len(saved) is n-1)
+            assert(len(saved) is len(n)-1)
 
         if len(n) > 1:
             for i in range(0, len(n)-2):
@@ -233,7 +236,7 @@ class ForwardFeed:
             self.weights = reduce(operator.add, map(lambda x: x.weights, self.layers))
 
     def save(self):
-        return map(lamdba layer: layer.save(), self.layers) 
+        return map(lambda layer: layer.save(), self.layers) 
 
     def compute(self, input):
         """

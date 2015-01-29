@@ -16,8 +16,8 @@ import random
 
 
 print """
-Running Experiment 8:
-Training an RNN on the set 1 dice.
+Running Experiment 9:
+Training an RNN on the set 1 dice. This is really just to test load and save.`
 """
 
 # dataset = 'datasets/one-die-optimal.pickle'
@@ -43,7 +43,7 @@ with open('../../'+dataset, 'rb') as handle:
 # nextProbs is the correct likelihood of the next feature. This will be used to
 # guage how the modeled learned, but it won't be used to train the model.
 
-values = lambda arr, key: map(lamdba x: x[key], arr)
+values = lambda arr, key: map(lambda x: x[key], arr)
 toArray = lambda x: numpy.array(x, dtype=theano.config.floatX)
 
 actions =      toArray(values(samples, 'actions'))
@@ -87,13 +87,13 @@ rnn = RNN.create(
     ff_pred=[50],
     L1_reg = .1,
     L2_reg = .0,
-    transitionActivation=layer.tanh,
-    outputActivation=layer.softmax
+    transitionActivation='tanh',
+    outputActivation='softmax'
 )
 
 lr = 0.0005
 mom = 0.2
-epochs = 1
+epochs = 2000
 
 rnn.train(
     observations=observations[0:trials,0:length+1,:],
@@ -105,7 +105,7 @@ rnn.train(
 
 rnn.visualize(observations[0,0:length+1,:], actions[0,0:length,:])
 
-testErr = rnn.test(observations[trails:,0:length+1,:], actions[trails:,0:length,:])
+testErr = rnn.test(observations[trials:,0:length+1,:], actions[trials:,0:length,:])
 
 filename = 'rnn.pickle'
 rnn.save(filename, lr=lr, mom=mom, epochs=epochs, dataset=dataset, notes="""
@@ -120,6 +120,6 @@ rnn2, lr2, mom2, dataset2, epochs2, notes2 = RNN.load(filename)
 
 rnn2.visualize(observations[0,0:length+1,:], actions[0,0:length,:])
 
-testErr2 = rnn2.test(observations[trails:,0:length+1,:], actions[trails:,0:length,:])
+testErr2 = rnn2.test(observations[trials:,0:length+1,:], actions[trials:,0:length,:])
 
 print testErr2, "should equal", testErr
