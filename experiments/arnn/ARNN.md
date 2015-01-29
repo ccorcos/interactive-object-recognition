@@ -77,7 +77,7 @@ TODO:
 load and save a model. make sure this works!
 - visualize
 - test
-
+- add a timer!
 
 
 

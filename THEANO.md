@@ -19,7 +19,7 @@ to test the functionality of the program as it goes so you can get a line number
 
 Then make sure you set the flag when you run it.
 
-    THEANO_FLAGS="optimizer=None,compute_test_value=raise" python program.py
+    THEANO_FLAGS="optimizer=None,compute_test_value=raise" python experiment.py
 
 # Parallelization
 

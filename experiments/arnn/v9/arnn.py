@@ -10,6 +10,7 @@ from sparkprob import sparkprob
 import operator
 from layer import *
 import cPickle as pickle
+from stopwatch import *
 
 # hide warnings
 import warnings
@@ -21,7 +22,11 @@ MODE ='FAST_RUN'
 
 fmt = lambda x: "{:12.8f}".format(x)
 
+
 class RNN:
+    def __init__(self):
+        self.time = Stopwatch(name="RNN")
+    
     @classmethod
     def create(cls, 
                warmUp=5,
@@ -74,7 +79,6 @@ class RNN:
                                                y_t
 
         """
-
         rnn = cls()
         # regularization hyperparameters
         rnn.L1_reg = float(L1_reg)
@@ -193,6 +197,7 @@ class RNN:
         """
         
         print "Constructing the RNN..."
+        print self.time
         print "  initializing layers"
 
         # intialize the forward feed layers
@@ -273,6 +278,7 @@ class RNN:
             return y_t, k_t, h_t
 
         print "  creating computational graph"
+        print self.time
 
         # step through the first i observations
         [y1, k1, h1], _ = theano.scan(step,
@@ -304,6 +310,7 @@ class RNN:
         self.error = T.mean(T.neq(self.ypred[self.warmUp:], self.opred[self.warmUp:]))
 
         print "  compiling the prediction function"
+        print self.time
         # predict function outputs y for a given x
         self.predict = theano.function(inputs=[self.o, self.a], outputs=[self.y, self.ypred, self.error], mode=MODE)
 
@@ -313,6 +320,7 @@ class RNN:
         """
 
         print "Constructing the RNN trainer..."
+        print self.time
 
         # gather all the parameters
         self.params = reduce(operator.add, map(lambda x: x.params, self.layers)) + [self.k0]
@@ -342,6 +350,7 @@ class RNN:
         
 
         print "  computing the gradient"
+        print self.time
         # gradients on the weights using BPTT
         self.gparams = [T.grad(self.cost, param) for param in self.params]
         
@@ -359,6 +368,7 @@ class RNN:
             updates.append((param, param + update))
 
         print "  compiling training function"
+        print self.time
         printY = theano.printing.Print("y:")
         printO = theano.printing.Print("o[1:]:")
         printLoss = theano.printing.Print("ploss:")
@@ -375,7 +385,7 @@ class RNN:
         n_samples = len(observations)
 
         print "Training the RNN..."
-
+        print self.time
         cost = 100
         error = 100
         # training
@@ -385,6 +395,7 @@ class RNN:
                 cost, error = self.trainStep(observations[i], actions[i], learningRate, momentum)
             print "  cost: " + fmt(float(cost)) + " error: " + fmt(float(error))
         print "DONE"
+        print self.time
         print ""
         return cost, error
 
