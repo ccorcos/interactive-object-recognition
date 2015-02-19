@@ -3,29 +3,19 @@
 This repo contains my research in interactive object recognition.
 
 Right now, I'm working on building an unsupervised model to predict the next side
-of a die after an action given all previous actions and observations. Thus, we need
-a model that is very powerful at learning latent variables, in this case, 3D pose.
-
-## To Do
-
-pylearn2?
-http://deeplearning.net/software/pylearn2/
-
+of a die after an action given all previous actions and observations.
 
 ## Getting Started
 
     pip install sparkprob
     pip install se3
-    sudo python dice/setup.py develop
+    python dice/setup.py develop
 
+This package also depends on my [Deep Learning repo](https://github.com/ccorcos/deep-learning).
+After cloning it, make sure you setup and develop that package as well. 
 
-## just some random thoughts
+You can clean up with
 
-Why dont we think about rnn training as some sort of graph optimization?
-Given some inputs, follow the positive weights to the output. 
-Define this as a backbone in the RNN that resists change.
-Can we use some form of max-flow min-cut
+    python setup.py develop --uninstall
 
-## Things I've Tried
-
-Use a RNN and ARNN for 
+## To Do

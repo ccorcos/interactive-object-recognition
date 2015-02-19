@@ -1,14 +1,10 @@
 from setuptools import setup
 
-def readme():
-    with open('README.rst') as f:
-        return f.read()
-
 setup(
     name='dice',
     version='0.1',
     description='A dice model for interactive object recognition',
-    long_description=readme(),
+    long_description='A dice model for interactive object recognition',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Programming Language :: Python :: 2.7',
