@@ -9,7 +9,8 @@ of a die after an action given all previous actions and observations.
 
     pip install sparkprob
     pip install se3
-    python dice/setup.py develop
+    cd dice
+    python setup.py develop
 
 This package also depends on my [Deep Learning repo](https://github.com/ccorcos/deep-learning).
 After cloning it, make sure you setup and develop that package as well. 
