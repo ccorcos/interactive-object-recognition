@@ -1,5 +1,6 @@
 from dice.die import *
 from dice.solver import *
+
 import random
 import cPickle as pickle
 
@@ -104,3 +105,41 @@ def loadDataset(filename):
       samples = pickle.load(handle)
 
     return samples
+
+
+def randomTrial(die, n_actions):
+    die = random.sample(generateAllDiePoses([die]), 1)[0]
+
+    observations = []
+    actions = []
+
+    # first observation
+    observation = die.obs()
+    observations.append(oneHot(observation, allFeatures))
+
+    for i in range(n_actions):
+
+        action = random.sample(allActions, 1)[0]
+        actions.append(oneHot(action,allActions))
+        die.act(action)
+
+        observation = die.obs()
+        observations.append(oneHot(observation, allFeatures))
+
+
+    return observations, actions
+
+def randomTrials(dice_set, n_actions, n_trials):
+
+    obsData = []
+    actData = []
+
+    for i in range(n_trials):
+
+        die = random.sample(dice_set, 1)[0]
+        o, a = randomTrial(die, n_actions)
+
+        obsData.append(o)
+        actData.append(a)
+   
+    return obsData, actData

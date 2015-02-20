@@ -20,3 +20,16 @@ You can clean up with
     python setup.py develop --uninstall
 
 ## To Do
+
+
+Generate a dataset. Use the DL package tools and formatting
+
+- n_examples x n_timesteps x n_dim
+- observations, actions
+
+
+Learn one dice using embedding
+Learn one dice from multiple poses using embedding
+
+Learn two dice using embedding
+Learn a second dice by only training on the embedding matrix
