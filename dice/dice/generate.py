@@ -143,3 +143,23 @@ def randomTrials(dice_set, n_actions, n_trials):
         actData.append(a)
    
     return obsData, actData
+
+
+def supervisedData(dice_set, n_actions, n_trials):
+
+    obsData  = []
+    actData  = []
+    yData    = []
+
+    l = len(dice_set)
+
+    for i in range(n_trials):
+
+        y = random.sample(range(l), 1)[0]
+        o, a = randomTrial(dice_set[y], n_actions)
+
+        obsData.append(o)
+        actData.append(a)
+        yData.append([y]*(n_actions+1))
+   
+    return obsData, actData, yData
